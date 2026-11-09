@@ -90,7 +90,7 @@ export default function GuestLinkGenerator() {
                   onChange={(e) => setIsSecret(e.target.checked)}
                   className="rounded text-gold focus:ring-gold bg-navy-900"
                 />
-                <span>Tự động mở Thư Bí Mật khi người này truy cập (Dành cho người đặc biệt)</span>
+                <span>Cho phép người này mở Thư Bí Mật (Dành cho người đặc biệt)</span>
               </label>
 
               {/* Ô hiển thị Link */}

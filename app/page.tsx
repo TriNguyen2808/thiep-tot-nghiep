@@ -66,11 +66,7 @@ function GraduationInvitationContent() {
       const decodedName = decodeURIComponent(nameParam.replace(/_/g, ' '));
       setGuestName(decodedName);
     }
-
-    const secretParam = searchParams.get('secret') || searchParams.get('letter');
-    if (secretParam === '1' || secretParam === 'true') {
-      setShowSecretLetter(true);
-    }
+    // Không tự động mở thư bí mật khi truy cập - chỉ mở khi khách nhấn vào nút "Mở Thư Bí Mật"
   }, [searchParams]);
 
   // Cập nhật thông tin khách khi siteConfig hoặc guestId/guestName thay đổi

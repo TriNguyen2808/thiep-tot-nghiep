@@ -79,38 +79,102 @@ export default function AdminPage() {
     }, 4500);
   };
 
-  // Helper hàm tải nhiều file ảnh lên server (/api/admin/upload)
+  // Tự động nén ảnh thông minh trước khi tải lên (giúp ảnh sắc nét nhưng dung lượng nhỏ gọn, không bao giờ bị lỗi quá tải Vercel 4.5MB)
+  const compressImageBeforeUpload = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith('image/') || file.size < 350 * 1024) {
+        return resolve(file);
+      }
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.onload = () => {
+          const maxDim = 1600;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return resolve(file);
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (blob && blob.size < file.size) {
+                const compressed = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                resolve(compressed);
+              } else {
+                resolve(file);
+              }
+            },
+            'image/jpeg',
+            0.85
+          );
+        };
+        img.onerror = () => resolve(file);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Helper hàm tải từng ảnh riêng lẻ (tránh lỗi Request Entity Too Large trên Vercel)
   const uploadFilesToServer = async (files: FileList | File[]): Promise<string[]> => {
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return [];
 
     setIsUploading(true);
+    const uploadedUrls: string[] = [];
+
     try {
-      const formData = new FormData();
-      fileArray.forEach((file) => {
-        formData.append('files', file);
-      });
+      for (let i = 0; i < fileArray.length; i++) {
+        const rawFile = fileArray[i];
+        // 1. Tự động nén ảnh tối ưu kích thước
+        const fileToUpload = await compressImageBeforeUpload(rawFile);
 
-      const headers: Record<string, string> = {};
-      if (githubToken) {
-        headers['x-github-token'] = githubToken;
+        const formData = new FormData();
+        formData.append('files', fileToUpload);
+
+        const headers: Record<string, string> = {};
+        if (githubToken) {
+          headers['x-github-token'] = githubToken;
+        }
+
+        const res = await fetch('/api/admin/upload', {
+          method: 'POST',
+          headers,
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText.slice(0, 100) || `Lỗi tải ảnh (${res.status})`);
+        }
+
+        const json = await res.json();
+        if (json.success && Array.isArray(json.urls) && json.urls.length > 0) {
+          uploadedUrls.push(json.urls[0]);
+        }
       }
 
-      const res = await fetch('/api/admin/upload', {
-        method: 'POST',
-        headers,
-        body: formData,
-      });
-
-      const json = await res.json();
-      if (json.success && Array.isArray(json.urls)) {
-        return json.urls;
-      }
-      throw new Error(json.error || 'Tải ảnh thất bại');
+      return uploadedUrls;
     } catch (err: any) {
       console.error('Upload error:', err);
       showStatus('Lỗi khi tải ảnh lên: ' + err.message, 'error');
-      return [];
+      return uploadedUrls;
     } finally {
       setIsUploading(false);
     }
