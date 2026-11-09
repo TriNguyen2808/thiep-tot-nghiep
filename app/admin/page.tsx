@@ -91,8 +91,14 @@ export default function AdminPage() {
         formData.append('files', file);
       });
 
+      const headers: Record<string, string> = {};
+      if (githubToken) {
+        headers['x-github-token'] = githubToken;
+      }
+
       const res = await fetch('/api/admin/upload', {
         method: 'POST',
+        headers,
         body: formData,
       });
 
