@@ -94,11 +94,11 @@ export default function InvitationCard({
       ? leftAngles[idx % leftAngles.length]
       : rightAngles[idx % rightAngles.length];
 
-    // 3. Vị trí ngang: so le zigzag (xen kẽ gần - xa) để tạo chiều sâu thị giác
+    // 3. Vị trí ngang: Nằm gọn gàng trong mép màn hình điện thoại, không bị tràn ra ngoài
     const isOuter = side === 'left' ? idx % 2 === 0 : idx % 2 === 1;
     const horizontalClass = side === 'left'
-      ? (isOuter ? 'left-0.5 xs:left-2 sm:-left-36 md:-left-44 lg:-left-52' : '-left-2 xs:left-0 sm:-left-28 md:-left-36 lg:-left-40')
-      : (isOuter ? 'right-0.5 xs:right-2 sm:-right-36 md:-right-44 lg:-right-52' : '-right-2 xs:right-0 sm:-right-28 md:-right-36 lg:-right-40');
+      ? (isOuter ? 'left-1 sm:-left-32 md:-left-40 lg:-left-48' : 'left-0 sm:-left-24 md:-left-32 lg:-left-38')
+      : (isOuter ? 'right-1 sm:-right-32 md:-right-40 lg:-right-48' : 'right-0 sm:-right-24 md:-right-32 lg:-right-38');
 
     // 4. Thời gian trôi nổi khác nhau cho từng bức ảnh
     const duration = 4.2 + ((idx * 0.7) % 2.5);
@@ -123,7 +123,7 @@ export default function InvitationCard({
   return (
     <section 
       ref={containerRef} 
-      className="relative w-full min-h-screen max-w-5xl mx-auto px-3 sm:px-6 py-8 md:py-16 flex flex-col items-center justify-center"
+      className="relative w-full min-h-screen max-w-5xl mx-auto px-2 sm:px-6 py-8 md:py-16 flex flex-col items-center justify-center overflow-x-clip"
     >
       {/* Vệt sáng spotlight từ trên chiếu xuống lá thư */}
       <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-80 sm:w-[500px] h-96 bg-gradient-to-b from-white/35 via-white/10 to-transparent blur-3xl pointer-events-none rounded-full" />
@@ -156,8 +156,8 @@ export default function InvitationCard({
               ease: 'easeInOut',
             }}
             onClick={() => setZoomedPhoto(photo.src)}
-            className={`absolute rounded-2xl overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.3)] border border-white/60 cursor-pointer pointer-events-auto hover:scale-110 group transition-transform z-0
-              w-22 xs:w-26 sm:w-36 lg:w-44
+            className={`absolute rounded-xl sm:rounded-2xl overflow-hidden shadow-md sm:shadow-[0_15px_35px_rgba(0,0,0,0.3)] border border-white/70 cursor-pointer pointer-events-auto hover:scale-110 group transition-transform z-0
+              w-16 sm:w-32 md:w-36 lg:w-44
               ${layout.horizontalClass}
             `}
             title="Bấm để phóng to xem ảnh"
@@ -199,8 +199,8 @@ export default function InvitationCard({
               ease: 'easeInOut',
             }}
             onClick={() => setZoomedPhoto(photo.src)}
-            className={`absolute rounded-2xl overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.3)] border border-white/60 cursor-pointer pointer-events-auto hover:scale-110 group transition-transform z-0
-              w-22 xs:w-26 sm:w-36 lg:w-44
+            className={`absolute rounded-xl sm:rounded-2xl overflow-hidden shadow-md sm:shadow-[0_15px_35px_rgba(0,0,0,0.3)] border border-white/70 cursor-pointer pointer-events-auto hover:scale-110 group transition-transform z-0
+              w-16 sm:w-32 md:w-36 lg:w-44
               ${layout.horizontalClass}
             `}
             title="Bấm để phóng to xem ảnh"
@@ -227,7 +227,7 @@ export default function InvitationCard({
           duration: 0.75, 
           ease: [0.34, 1.56, 0.64, 1]
         }}
-        className="relative z-10 w-full max-w-[340px] xs:max-w-[370px] sm:max-w-[500px] md:max-w-[580px] lg:max-w-[640px] flex flex-col shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35),0_0_35px_rgba(255,255,255,0.4)] rounded-3xl overflow-hidden my-auto"
+        className="relative z-10 w-[88%] max-w-[325px] sm:max-w-[500px] md:max-w-[580px] lg:max-w-[640px] flex flex-col shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35),0_0_35px_rgba(255,255,255,0.4)] rounded-3xl overflow-hidden my-auto"
       >
         {/* KHỐI TRÊN: NỀN XANH NAVY + ẢNH (ẢNH RIÊNG HOẶC MẶC ĐỊNH) + CÂU "Biết ơn vì..." */}
         <div className="relative bg-[#0E2A47] p-4 sm:p-6 md:p-8 border-2 border-b-0 border-amber-400/80 rounded-t-3xl overflow-hidden">

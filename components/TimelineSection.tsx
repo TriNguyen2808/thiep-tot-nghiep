@@ -104,12 +104,9 @@ export default function TimelineSection({ siteConfig }: TimelineSectionProps) {
               <Calendar className="w-4 h-4 text-amber-400" />
               <span>Thời khắc vinh danh trọng đại</span>
             </div>
-            <h3 className="font-serif text-lg sm:text-2xl font-bold text-white">
-              Đếm Ngược Đến <span className="text-amber-300 font-extrabold">10:30 • 14/11/2026</span>
+            <h3 className="font-serif text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight my-1">
+              10:30 - 13:00
             </h3>
-            <p className="text-xs text-slate-300 mt-1">
-              Lễ trao bằng Cử nhân chính thức của Trí Nguyễn tại hội trường
-            </p>
           </div>
 
           {/* 4 ô đếm ngược: Ngày, Giờ, Phút, Giây */}

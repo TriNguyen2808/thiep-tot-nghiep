@@ -12,7 +12,11 @@ import { soundFX } from '@/lib/sound';
 import { Wish } from '@/types';
 import { INITIAL_WISHES } from '@/data/initialData';
 
-export default function GuestbookSection() {
+interface GuestbookSectionProps {
+  guestName?: string;
+}
+
+export default function GuestbookSection({ guestName = '' }: GuestbookSectionProps) {
   const [wishes, setWishes] = useState<Wish[]>(INITIAL_WISHES);
   const [formData, setFormData] = useState({
     name: '',
@@ -21,6 +25,7 @@ export default function GuestbookSection() {
     isPublic: true,
   });
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -74,20 +79,67 @@ export default function GuestbookSection() {
     fetchWishes();
   }, []);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const maxFiles = Math.min(files.length, 5);
-    Array.from(files).slice(0, maxFiles).forEach((file) => {
+  // Nén ảnh client-side trước khi đưa vào form để không vượt quá giới hạn 4.5MB của Vercel
+  const compressImageFile = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
       const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setSelectedImages((prev) => [...prev, event.target!.result as string]);
-        }
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 800; // Giới hạn kích thước tối đa 800px cho ảnh lưu bút
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.75));
+          } else {
+            resolve(e.target?.result as string);
+          }
+        };
+        img.onerror = () => resolve(e.target?.result as string);
+        img.src = e.target?.result as string;
       };
       reader.readAsDataURL(file);
     });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsProcessingPhotos(true);
+    try {
+      const remainingSlots = 5 - selectedImages.length;
+      if (remainingSlots <= 0) return;
+
+      const filesToProcess = Array.from(files).slice(0, remainingSlots);
+      const compressedList: string[] = [];
+
+      for (const file of filesToProcess) {
+        const compressed = await compressImageFile(file);
+        compressedList.push(compressed);
+      }
+
+      setSelectedImages((prev) => [...prev, ...compressedList]);
+    } catch (err) {
+      console.warn('Lỗi xử lý ảnh:', err);
+    } finally {
+      setIsProcessingPhotos(false);
+      if (e.target) e.target.value = '';
+    }
   };
 
   const removeImage = (index: number) => {
@@ -98,10 +150,7 @@ export default function GuestbookSection() {
     e.preventDefault();
     setErrorMessage('');
 
-    if (formData.isPublic && !formData.name.trim()) {
-      setErrorMessage('Vui lòng nhập biệt danh của bạn nhé!');
-      return;
-    }
+    // Không bắt buộc nhập biệt danh, nếu để trống sẽ tự lấy tên khách
     if (!formData.message.trim()) {
       setErrorMessage('Hãy gửi gắm một vài dòng lời chúc tới Trí nhé!');
       return;
@@ -113,9 +162,12 @@ export default function GuestbookSection() {
   const handleConfirmSubmit = async () => {
     setShowConfirmModal(false);
     setIsSubmitting(true);
+    setErrorMessage('');
 
+    // Ưu tiên biệt danh khách tự nhập -> nếu để trống thì lấy tên khách trong dữ liệu -> fallback "Bạn Thân Mến"
+    const resolvedName = formData.name.trim() || guestName?.trim() || 'Bạn Thân Mến';
     const finalName = formData.isPublic 
-      ? (formData.name.trim() || 'Bạn Thân Mến') 
+      ? resolvedName 
       : 'Một người bạn ẩn danh 🤫';
 
     const payload = {
@@ -132,6 +184,15 @@ export default function GuestbookSection() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
+      if (!res.ok) {
+        let errMessage = `Lỗi máy chủ (${res.status})`;
+        try {
+          const errJson = await res.json();
+          if (errJson.error) errMessage = errJson.error;
+        } catch (_) {}
+        throw new Error(errMessage);
+      }
 
       const json = await res.json();
       let newWishItem: Wish;
@@ -178,9 +239,26 @@ export default function GuestbookSection() {
       });
 
       setTimeout(() => setSubmitSuccess(false), 5000);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setErrorMessage('Không thể kết nối đến máy chủ. Lời chúc đã được lưu cục bộ.');
+      // Vẫn lưu vào máy khách để trải nghiệm người dùng không bị mất lời chúc
+      const fallbackItem: Wish = {
+        id: `wish-${Date.now()}`,
+        name: finalName,
+        attendance: formData.attendance,
+        message: formData.message,
+        images: selectedImages,
+        isPublic: formData.isPublic,
+        likes: 0,
+        createdAt: new Date().toISOString(),
+      };
+      const updated = [fallbackItem, ...wishes];
+      setWishes(updated);
+      try {
+        localStorage.setItem('tri_graduation_wishes', JSON.stringify(updated));
+      } catch (_) {}
+
+      setErrorMessage(err.message || 'Không thể kết nối đến máy chủ. Lời chúc đã được lưu cục bộ.');
     } finally {
       setIsSubmitting(false);
     }
@@ -339,11 +417,12 @@ export default function GuestbookSection() {
 
               <button
                 type="button"
+                disabled={isProcessingPhotos}
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-slate-300 hover:border-[#27A4F2] bg-slate-50 text-slate-600 text-xs font-mono flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                className="w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-slate-300 hover:border-[#27A4F2] bg-slate-50 text-slate-600 text-xs font-mono flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-60"
               >
                 <Camera className="w-4 h-4 text-[#27A4F2]" />
-                <span>Bấm để tải ảnh lên</span>
+                <span>{isProcessingPhotos ? 'Đang tối ưu hóa dung lượng ảnh...' : 'Bấm để tải ảnh lên (Tối đa 5 ảnh)'}</span>
               </button>
 
               {selectedImages.length > 0 && (
@@ -385,24 +464,26 @@ export default function GuestbookSection() {
                 </div>
               </label>
 
-              {/* Khi tick ô cho phép mọi người thấy -> Hiện ô nhập biệt danh */}
+              {/* Khi tick ô cho phép mọi người thấy -> Hiện ô nhập biệt danh (Tùy chọn) */}
               {formData.isPublic && (
                 <div className="pl-6.5 pt-0.5">
                   <label className="block text-[11px] font-mono uppercase text-slate-600 mb-1">
-                    Biệt Danh Của Bạn <span className="text-red-500">*</span>
+                    Biệt Danh Của Bạn <span className="text-slate-400 font-normal lowercase">(tùy chọn)</span>
                   </label>
                   <div className="relative">
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Ví dụ: Bạn thân nối khố, Linh Cún, Bro K18..."
+                      placeholder={guestName ? `Để trống sẽ lấy tên: "${guestName}"` : "Ví dụ: Bạn thân nối khố, Linh Cún..."}
                       className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#27A4F2] text-xs sm:text-sm"
                     />
                     <User className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
                   </div>
                   <p className="text-[10px] text-slate-400 mt-1">
-                    Biệt danh này sẽ xuất hiện cùng lời chúc của bạn trên bảng tin.
+                    {guestName 
+                      ? `💡 Không bắt buộc. Nếu để trống, lời chúc sẽ hiển thị tên "${guestName}".` 
+                      : '💡 Không bắt buộc nhập. Bạn có thể để trống hoặc đặt biệt danh gần gũi.'}
                   </p>
                 </div>
               )}

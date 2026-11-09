@@ -7,7 +7,6 @@ import InvitationCard from '@/components/InvitationCard';
 import SecretLetterModal from '@/components/SecretLetterModal';
 import CheckinModal from '@/components/CheckinModal';
 import TimelineSection from '@/components/TimelineSection';
-import GallerySection from '@/components/GallerySection';
 import GuestbookSection from '@/components/GuestbookSection';
 import MusicPlayer from '@/components/MusicPlayer';
 import TwinklingLights from '@/components/TwinklingLights';
@@ -150,11 +149,8 @@ function GraduationInvitationContent() {
       {/* 5. Screen Timeline (Đồng hồ đếm ngược đến 10:30 ngày 14/11/2026, địa chỉ Maps, nhiều số liên hệ, bãi xe) */}
       <TimelineSection siteConfig={siteConfig} />
 
-      {/* 6. Screen Bộ Sưu Tập Những Khoảnh Khắc Đẹp Tại Trường (Mobile xem 2 album trên 1 hàng) */}
-      <GallerySection collections={siteConfig?.collections} />
-
-      {/* 7. Screen Gửi Lời Chúc (Form bên trái + Feed màn hình mô phỏng điện thoại lướt xem các lời chúc) */}
-      <GuestbookSection />
+      {/* 6. Screen Gửi Lời Chúc (Form bên trái + Feed màn hình mô phỏng điện thoại lướt xem các lời chúc) */}
+      <GuestbookSection guestName={guestName} />
 
       {/* 8. Floating Music Player (Tự động phát từ khi vào link) */}
       <MusicPlayer isAutoPlayRequested={isMusicRequested} />

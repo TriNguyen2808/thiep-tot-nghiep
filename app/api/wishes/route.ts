@@ -1,14 +1,50 @@
 import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 import { INITIAL_WISHES } from '@/data/initialData';
 import { Wish } from '@/types';
+
+const dataFilePath = path.join(process.cwd(), 'data', 'wishes.json');
+const tmpFilePath = path.join('/tmp', 'wishes.json');
 
 // In-memory store cho runtime Next.js
 let wishesMemory: Wish[] = [...INITIAL_WISHES];
 
+function getStoredWishes(): Wish[] {
+  // 1. Thử đọc từ /tmp
+  try {
+    if (fs.existsSync(tmpFilePath)) {
+      const data = JSON.parse(fs.readFileSync(tmpFilePath, 'utf-8'));
+      if (Array.isArray(data) && data.length > 0) return data;
+    }
+  } catch (_) {}
+
+  // 2. Thử đọc từ data/wishes.json
+  try {
+    if (fs.existsSync(dataFilePath)) {
+      const data = JSON.parse(fs.readFileSync(dataFilePath, 'utf-8'));
+      if (Array.isArray(data) && data.length > 0) return data;
+    }
+  } catch (_) {}
+
+  return wishesMemory;
+}
+
+function persistWishes(list: Wish[]) {
+  wishesMemory = list;
+  try {
+    fs.writeFileSync(tmpFilePath, JSON.stringify(list), 'utf-8');
+  } catch (_) {}
+  try {
+    fs.writeFileSync(dataFilePath, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (_) {}
+}
+
 export async function GET() {
+  const current = getStoredWishes();
   return NextResponse.json({
     success: true,
-    data: wishesMemory,
+    data: current,
   });
 }
 
@@ -37,7 +73,9 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
     };
 
-    wishesMemory.unshift(newWish);
+    const current = getStoredWishes();
+    const updated = [newWish, ...current];
+    persistWishes(updated);
 
     return NextResponse.json({
       success: true,
@@ -58,7 +96,8 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const { id, isPublic } = body;
 
-    const targetWish = wishesMemory.find((w) => w.id === id);
+    const current = getStoredWishes();
+    const targetWish = current.find((w) => w.id === id);
     if (!targetWish) {
       return NextResponse.json(
         { success: false, error: 'Không tìm thấy lời chúc!' },
@@ -71,6 +110,8 @@ export async function PATCH(request: Request) {
     } else {
       targetWish.likes = (targetWish.likes || 0) + 1;
     }
+
+    persistWishes(current);
 
     return NextResponse.json({
       success: true,
@@ -94,7 +135,9 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'Thiếu id lời chúc' }, { status: 400 });
     }
 
-    wishesMemory = wishesMemory.filter((w) => w.id !== id);
+    const current = getStoredWishes();
+    const updated = current.filter((w) => w.id !== id);
+    persistWishes(updated);
 
     return NextResponse.json({
       success: true,
