@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Camera, X, RotateCcw, Download, Clock, Image as ImageIcon, 
@@ -26,14 +26,45 @@ export default function CheckinModal({ isOpen, onClose, guestName }: CheckinModa
   const [isProcessing, setIsProcessing] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
+  // CÁC STATE CHO ZOOM & CÂN BẰNG SÁNG CHẠY NGẦM KHÔNG GÂY RỐI MẮT
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
+  const [brightnessAdjustment, setBrightnessAdjustment] = useState<number>(1.0);
+  const [focusBox, setFocusBox] = useState<{ x: number; y: number } | null>(null);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const cameraContainerRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Refs cho sự kiện cử chỉ cảm ứng 2 ngón tay (Pinch to zoom) và chạm đo sáng (Tap to expose)
+  const pinchStartDistRef = useRef<number | null>(null);
+  const pinchStartZoomRef = useRef<number>(1.0);
+  const isPinchingRef = useRef<boolean>(false);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const touchStartTimeRef = useRef<number>(0);
+  const focusBoxTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Áp dụng hardware zoom nếu thiết bị có hỗ trợ (Android / Chrome WebRTC)
+  const applyHardwareZoom = (val: number) => {
+    if (streamRef.current) {
+      const track = streamRef.current.getVideoTracks()[0];
+      if (track) {
+        const capabilities = (track.getCapabilities?.() as any) || {};
+        if (capabilities.zoom) {
+          const clamped = Math.min(Math.max(val, capabilities.zoom.min || 1), capabilities.zoom.max || 3.5);
+          track.applyConstraints({ advanced: [{ zoom: clamped } as any] }).catch(() => {});
+        }
+      }
+    }
+  };
 
   // 1. MỞ CAMERA HTML5 CHUẨN (SIÊU NHẸ, MỞ NGAY 0.1S)
   const startCamera = async () => {
     stopCamera();
     setCameraError(null);
+    setZoomLevel(1.0);
+    setBrightnessAdjustment(1.0);
+    setFocusBox(null);
 
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -51,7 +82,6 @@ export default function CheckinModal({ isOpen, onClose, guestName }: CheckinModa
           audio: false,
         });
       } catch (err1) {
-        // Fallback đơn giản hơn nếu thông số ideal không được thiết bị đáp ứng
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: cameraFacing },
           audio: false,
@@ -101,6 +131,149 @@ export default function CheckinModal({ isOpen, onClose, guestName }: CheckinModa
     setTimerSetting(options[nextIdx]);
   };
 
+  // 2. CHỨC NĂNG CHẠM ĐỂ CÂN BẰNG SÁNG & ĐO NÉT (TAP TO EXPOSE / BALANCE LIGHT)
+  const handleTapToBalanceLight = useCallback((clientX: number, clientY: number) => {
+    if (!cameraContainerRef.current || !videoRef.current) return;
+    const rect = cameraContainerRef.current.getBoundingClientRect();
+    const relX = clientX - rect.left;
+    const relY = clientY - rect.top;
+
+    if (relX < 0 || relX > rect.width || relY < 0 || relY > rect.height) return;
+
+    // Hiển thị khung đo sáng / lấy nét màu vàng tại vị trí chạm
+    setFocusBox({ x: relX, y: relY });
+    if (focusBoxTimerRef.current) clearTimeout(focusBoxTimerRef.current);
+    focusBoxTimerRef.current = setTimeout(() => {
+      setFocusBox(null);
+    }, 1800);
+
+    // Kích hoạt lấy nét & cân bằng sáng phần cứng nếu camera hỗ trợ
+    if (streamRef.current) {
+      const track = streamRef.current.getVideoTracks()[0];
+      if (track) {
+        const caps = (track.getCapabilities?.() as any) || {};
+        const constraints: any = {};
+        if (caps.focusMode && caps.focusMode.includes('continuous')) constraints.focusMode = 'continuous';
+        if (caps.exposureMode && caps.exposureMode.includes('continuous')) constraints.exposureMode = 'continuous';
+        if (Object.keys(constraints).length > 0) {
+          track.applyConstraints({ advanced: [constraints] }).catch(() => {});
+        }
+      }
+    }
+
+    // Thuật toán đo sáng thông minh bằng Canvas:
+    // Lấy mẫu độ sáng tại vùng vừa chạm trên video để cân bằng sáng tự động
+    try {
+      const video = videoRef.current;
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        const sampleCanvas = document.createElement('canvas');
+        sampleCanvas.width = 100;
+        sampleCanvas.height = 100;
+        const sCtx = sampleCanvas.getContext('2d', { willReadFrequently: true });
+        if (sCtx) {
+          sCtx.drawImage(video, 0, 0, 100, 100);
+
+          let normX = relX / rect.width;
+          if (cameraFacing === 'user') normX = 1 - normX;
+          const normY = relY / rect.height;
+
+          const sampleX = Math.max(0, Math.min(80, Math.round(normX * 100 - 10)));
+          const sampleY = Math.max(0, Math.min(80, Math.round(normY * 100 - 10)));
+          const imgData = sCtx.getImageData(sampleX, sampleY, 20, 20);
+
+          let totalLum = 0;
+          const pixelCount = imgData.data.length / 4;
+          for (let i = 0; i < imgData.data.length; i += 4) {
+            const r = imgData.data[i];
+            const g = imgData.data[i + 1];
+            const b = imgData.data[i + 2];
+            totalLum += 0.299 * r + 0.587 * g + 0.114 * b;
+          }
+          const avgLum = totalLum / pixelCount; // 0..255
+
+          let targetBrightness = 1.0;
+          if (avgLum < 105) {
+            // Vùng chạm bị tối: tăng sáng bù trừ
+            targetBrightness = Math.min(1.35, 1.0 + (105 - avgLum) / 160);
+          } else if (avgLum > 165) {
+            // Vùng chạm bị chói sáng: giảm độ chói
+            targetBrightness = Math.max(0.82, 1.0 - (avgLum - 165) / 190);
+          } else {
+            // Vùng sáng đã tương đối chuẩn: nâng nhẹ màu da tươi tắn
+            targetBrightness = 1.08;
+          }
+
+          setBrightnessAdjustment(Number(targetBrightness.toFixed(2)));
+        }
+      }
+    } catch (e) {
+      // Fallback nếu không đọc được pixel
+      setBrightnessAdjustment((prev) => (prev === 1.0 ? 1.15 : 1.0));
+    }
+  }, [cameraFacing]);
+
+  // 3. SỰ KIỆN CỬ CHỈ CẢM ỨNG (TOUCH EVENTS: PINCH TO ZOOM & TAP)
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2) {
+      // Bắt đầu cử chỉ 2 ngón tay (Pinch)
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      pinchStartDistRef.current = dist;
+      pinchStartZoomRef.current = zoomLevel;
+      isPinchingRef.current = true;
+    } else if (e.touches.length === 1) {
+      // Bắt đầu chạm 1 ngón tay (Chuẩn bị xác định là Tap hay vuốt)
+      touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      touchStartTimeRef.current = Date.now();
+      isPinchingRef.current = false;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2 && pinchStartDistRef.current) {
+      // Đang vuốt 2 ngón tay ra hoặc vào
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const ratio = dist / pinchStartDistRef.current;
+      const newZoom = Math.min(Math.max(pinchStartZoomRef.current * ratio, 1.0), 3.5);
+      const formattedZoom = Number(newZoom.toFixed(2));
+      setZoomLevel(formattedZoom);
+      applyHardwareZoom(formattedZoom);
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length < 2 && isPinchingRef.current) {
+      isPinchingRef.current = false;
+      pinchStartDistRef.current = null;
+    } else if (e.touches.length === 0 && touchStartPosRef.current && !isPinchingRef.current) {
+      // Kiểm tra xem có phải là chạm nhẹ (Tap) không
+      const touchDuration = Date.now() - touchStartTimeRef.current;
+      const changedTouch = e.changedTouches[0];
+      if (changedTouch) {
+        const moveDist = Math.hypot(
+          changedTouch.clientX - touchStartPosRef.current.x,
+          changedTouch.clientY - touchStartPosRef.current.y
+        );
+        if (touchDuration < 320 && moveDist < 16) {
+          handleTapToBalanceLight(changedTouch.clientX, changedTouch.clientY);
+        }
+      }
+      touchStartPosRef.current = null;
+    }
+  };
+
+  // Hỗ trợ click chuột trên máy tính để cân bằng sáng
+  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isPinchingRef.current) {
+      handleTapToBalanceLight(e.clientX, e.clientY);
+    }
+  };
+
   // Bấm chụp ảnh (có hẹn giờ nếu bật)
   const handleTriggerCheckin = () => {
     if (timerSetting > 0) {
@@ -121,7 +294,7 @@ export default function CheckinModal({ isOpen, onClose, guestName }: CheckinModa
     }
   };
 
-  // Cắt ảnh chụp vuông 404x404 từ camera
+  // Cắt ảnh chụp vuông 404x404 từ camera kèm áp dụng chính xác độ Zoom & Cân bằng sáng
   const takeSnapshot = () => {
     const video = videoRef.current;
     const W = 404;
@@ -137,11 +310,19 @@ export default function CheckinModal({ isOpen, onClose, guestName }: CheckinModa
       ctx.scale(-1, 1);
     }
 
+    // Áp dụng cân bằng sáng vào ảnh chụp
+    if (brightnessAdjustment !== 1.0) {
+      const contrastVal = 1 + (brightnessAdjustment - 1) * 0.15;
+      ctx.filter = `brightness(${brightnessAdjustment}) contrast(${contrastVal})`;
+    }
+
     if (video && video.videoWidth > 0) {
       const vSize = Math.min(video.videoWidth, video.videoHeight);
-      const sx = (video.videoWidth - vSize) / 2;
-      const sy = (video.videoHeight - vSize) / 2;
-      ctx.drawImage(video, sx, sy, vSize, vSize, 0, 0, W, H);
+      // Cắt ảnh theo tỉ lệ zoom
+      const cropSize = vSize / zoomLevel;
+      const sx = (video.videoWidth - cropSize) / 2;
+      const sy = (video.videoHeight - cropSize) / 2;
+      ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, W, H);
     } else {
       ctx.fillStyle = '#222';
       ctx.fillRect(0, 0, W, H);
@@ -193,6 +374,8 @@ export default function CheckinModal({ isOpen, onClose, guestName }: CheckinModa
   const handleRetake = () => {
     setCapturedImage(null);
     setSavedPhotoboothUrl(null);
+    setZoomLevel(1.0);
+    setBrightnessAdjustment(1.0);
     setMode('camera');
   };
 
@@ -361,7 +544,12 @@ export default function CheckinModal({ isOpen, onClose, guestName }: CheckinModa
 
           {/* ================= Ô CAMERA / CHỤP ẢNH: VỪA VẶN Ô XANH LÁ (86, 310, 404, 404) ================= */}
           <div
-            className="absolute overflow-hidden z-10 flex items-center justify-center bg-slate-900 rounded-sm"
+            ref={cameraContainerRef}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onClick={handleContainerClick}
+            className="absolute overflow-hidden z-10 flex items-center justify-center bg-slate-900 rounded-sm cursor-crosshair touch-none select-none"
             style={{
               left: '14.93%',
               top: '30.27%',
@@ -371,7 +559,7 @@ export default function CheckinModal({ isOpen, onClose, guestName }: CheckinModa
           >
             {/* ĐẾM NGƯỢC COUNTDOWN */}
             {countdown !== null && (
-              <div className="absolute inset-0 z-30 bg-black/60 flex items-center justify-center">
+              <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center pointer-events-none">
                 <motion.span
                   key={countdown}
                   initial={{ scale: 2, opacity: 0 }}
@@ -386,16 +574,37 @@ export default function CheckinModal({ isOpen, onClose, guestName }: CheckinModa
             {/* MÀN HÌNH CAMERA */}
             {mode === 'camera' ? (
               <div className="relative w-full h-full overflow-hidden bg-black flex items-center justify-center">
+                {/* THẺ VIDEO VỚI HIỆU ỨNG ZOOM MƯỢT VÀ BÙ ĐỘ SÁNG THỰC TẾ */}
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
                   muted
-                  className={`w-full h-full object-cover ${cameraFacing === 'user' ? '-scale-x-100' : ''}`}
+                  style={{
+                    transform: `${cameraFacing === 'user' ? 'scaleX(-1) ' : ''}scale(${zoomLevel})`,
+                    filter: brightnessAdjustment !== 1.0 
+                      ? `brightness(${brightnessAdjustment}) contrast(${1 + (brightnessAdjustment - 1) * 0.15})` 
+                      : 'none',
+                    transition: isPinchingRef.current ? 'none' : 'transform 0.12s ease-out, filter 0.25s ease-out',
+                  }}
+                  className="w-full h-full object-cover origin-center pointer-events-none"
                 />
 
+                {/* KHUNG LẤY NÉT NHẸ KHI CHẠM (TỰ BIẾN MẤT SAU 0.5S) */}
+                {focusBox && (
+                  <motion.div
+                    initial={{ scale: 1.3, opacity: 0.9 }}
+                    animate={{ scale: 1, opacity: 0 }}
+                    transition={{ duration: 0.55 }}
+                    className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 z-30"
+                    style={{ left: focusBox.x, top: focusBox.y }}
+                  >
+                    <div className="w-11 h-11 border border-white/80 rounded-sm shadow-sm" />
+                  </motion.div>
+                )}
+
                 {cameraError && (
-                  <div className="absolute inset-0 p-4 bg-slate-900/90 text-white flex flex-col items-center justify-center text-center gap-2">
+                  <div className="absolute inset-0 p-4 bg-slate-900/90 text-white flex flex-col items-center justify-center text-center gap-2 z-40">
                     <p className="text-xs text-amber-300 font-medium">{cameraError}</p>
                     <button
                       onClick={() => fileInputRef.current?.click()}
