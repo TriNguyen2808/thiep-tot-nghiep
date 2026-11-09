@@ -6,7 +6,7 @@ import {
   Save, Plus, Trash2, Copy, Check, ArrowLeft, 
   Upload, Image as ImageIcon, Users, MapPin, Phone, 
   Car, Layers, MessageSquare, Camera, Sparkles, AlertCircle, RefreshCw, 
-  Download, FileSpreadsheet, X, Eye
+  Download, FileSpreadsheet, X, Eye, Key
 } from 'lucide-react';
 import { SiteConfig, ContactPerson, ParkingLocation, CollectionItem, SidePhotoItem, GuestItem, Wish, CheckinPhoto } from '@/types';
 
@@ -26,8 +26,18 @@ export default function AdminPage() {
   const [importPasteText, setImportPasteText] = useState('');
   const [parsedImportGuests, setParsedImportGuests] = useState<Omit<GuestItem, 'id' | 'createdAt'>[]>([]);
 
-  // Load dữ liệu khi vào trang
+  // Token GitHub để lưu trực tiếp trên web Vercel
+  const [githubToken, setGithubToken] = useState<string>('');
+  const [tempTokenInput, setTempTokenInput] = useState<string>('');
+  const [showTokenModal, setShowTokenModal] = useState<boolean>(false);
+
+  // Load token và dữ liệu khi vào trang
   useEffect(() => {
+    const savedToken = localStorage.getItem('tri_admin_github_token');
+    if (savedToken) {
+      setGithubToken(savedToken);
+      setTempTokenInput(savedToken);
+    }
     fetchInitialData();
   }, []);
 
@@ -100,19 +110,52 @@ export default function AdminPage() {
     }
   };
 
+  const handleSaveGitHubToken = (tokenValue: string) => {
+    const clean = tokenValue.trim();
+    setGithubToken(clean);
+    setTempTokenInput(clean);
+    if (clean) {
+      localStorage.setItem('tri_admin_github_token', clean);
+      showStatus('Đã kết nối GitHub Token! Bây giờ bạn có thể chỉnh sửa và bấm Lưu trực tiếp trên web Vercel.', 'success');
+    } else {
+      localStorage.removeItem('tri_admin_github_token');
+      showStatus('Đã xóa GitHub Token.', 'success');
+    }
+    setShowTokenModal(false);
+  };
+
   const handleSaveConfig = async () => {
     if (!config) return;
     setIsSaving(true);
     try {
+      // Luôn lưu bản sao vào localStorage của trình duyệt
+      localStorage.setItem('tri_graduation_site_data', JSON.stringify(config));
+
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (githubToken) {
+        headers['x-github-token'] = githubToken;
+      }
+
       const res = await fetch('/api/admin/data', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(config),
       });
       const json = await res.json();
       if (json.success) {
-        localStorage.setItem('tri_graduation_site_data', JSON.stringify(config));
-        showStatus('Đã lưu toàn bộ thông tin cấu hình thành công! Website đã được cập nhật.', 'success');
+        if (json.isGitHubSaved) {
+          showStatus(
+            '🎉 Đã lưu và đồng bộ trực tiếp lên GitHub & Vercel thành công! Website đã được cập nhật cho toàn bộ khách mời.',
+            'success'
+          );
+        } else if (json.isVercelReadOnly) {
+          showStatus(
+            'Đã lưu vào bộ nhớ tạm! Bạn hãy nhấn nút "Cài GitHub Token" ở góc trên để web tự động lưu vĩnh viễn nhé.',
+            'success'
+          );
+        } else {
+          showStatus('Đã lưu toàn bộ thông tin cấu hình thành công! Website đã được cập nhật.', 'success');
+        }
       } else {
         showStatus(json.error || 'Có lỗi xảy ra khi lưu!', 'error');
       }
@@ -121,6 +164,19 @@ export default function AdminPage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Tải file siteData.json trực tiếp về máy tính
+  const handleExportConfigJSON = () => {
+    if (!config) return;
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(config, null, 2));
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute('href', dataStr);
+    dlAnchor.setAttribute('download', 'siteData.json');
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+    showStatus('Đã tải file siteData.json về máy tính!', 'success');
   };
 
   // Quản lý lời chúc
@@ -332,6 +388,34 @@ export default function AdminPage() {
               <span>Đang tải ảnh...</span>
             </span>
           )}
+
+          {/* Nút cài đặt GitHub Token để lưu trực tiếp trên web Vercel */}
+          <button
+            onClick={() => {
+              setTempTokenInput(githubToken);
+              setShowTokenModal(true);
+            }}
+            className={`px-3 py-2 rounded-xl text-xs font-mono flex items-center gap-1.5 cursor-pointer transition-colors border ${
+              githubToken
+                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50 hover:bg-emerald-900'
+                : 'bg-white/10 hover:bg-white/20 text-amber-300 border-amber-400/30'
+            }`}
+            title="Cài đặt GitHub Token để chỉnh sửa và lưu trực tiếp trên web Vercel"
+          >
+            <Key className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">
+              {githubToken ? 'Đã nối GitHub' : 'Cài GitHub Token'}
+            </span>
+          </button>
+
+          <button
+            onClick={handleExportConfigJSON}
+            className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-amber-300 border border-amber-400/30 text-xs font-mono flex items-center gap-1.5 cursor-pointer transition-colors"
+            title="Tải file siteData.json về máy tính để cập nhật"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Xuất file JSON</span>
+          </button>
 
           <button
             onClick={handleSaveConfig}
@@ -1636,6 +1720,61 @@ export default function AdminPage() {
                 className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 text-navy-950 font-serif font-black text-xs disabled:opacity-50 cursor-pointer shadow"
               >
                 Thêm {parsedImportGuests.length} Khách Vào Danh Sách
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Cài Đặt GitHub Token Để Lưu Trực Tiếp Trên Web Vercel */}
+      {showTokenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#0B1E36] border border-amber-400/40 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <button
+              onClick={() => setShowTokenModal(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-3 text-amber-300">
+              <Key className="w-5 h-5 text-amber-400" />
+              <h3 className="font-serif font-black text-base">CÀI ĐẶT GITHUB TOKEN</h3>
+            </div>
+
+            <p className="text-xs text-slate-300 mb-4 leading-relaxed">
+              Dán mã <strong>GitHub Personal Access Token</strong> (chuỗi bắt đầu bằng <code className="text-amber-300">ghp_...</code>) của bạn vào đây. Sau khi lưu, mỗi khi bạn vào trang Admin trên web Vercel và bấm <strong>&quot;LƯU TẤT CẢ&quot;</strong>, dữ liệu sẽ tự động lưu thẳng vào GitHub mà không bị lỗi!
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-[11px] font-mono text-slate-400 mb-1">
+                GitHub Token:
+              </label>
+              <input
+                type="password"
+                value={tempTokenInput}
+                onChange={(e) => setTempTokenInput(e.target.value)}
+                placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5">
+              {githubToken && (
+                <button
+                  type="button"
+                  onClick={() => handleSaveGitHubToken('')}
+                  className="px-3 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-500/40 text-xs font-mono cursor-pointer"
+                >
+                  Xóa Token
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => handleSaveGitHubToken(tempTokenInput)}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 text-navy-950 font-bold text-xs shadow-md transition-transform active:scale-95 cursor-pointer"
+              >
+                Lưu Token
               </button>
             </div>
           </div>
