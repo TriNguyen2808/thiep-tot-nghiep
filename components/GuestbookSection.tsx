@@ -31,30 +31,39 @@ export default function GuestbookSection() {
   const [postPhotoIndexes, setPostPhotoIndexes] = useState<{ [wishId: string]: number }>({});
 
   useEffect(() => {
+    const isNotDummyWish = (w: Wish) => !['wish-1', 'wish-2', 'wish-3', 'wish-4', '1', '2', '3', '4'].includes(w.id);
+
     const fetchWishes = async () => {
       try {
         const res = await fetch('/api/wishes');
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
+          const validServerData = json.data.filter(isNotDummyWish);
           const localStored = localStorage.getItem('tri_graduation_wishes');
           if (localStored) {
             try {
               const parsed = JSON.parse(localStored);
-              const combined = [...parsed, ...json.data];
-              const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
-              setWishes(unique);
-              return;
+              if (Array.isArray(parsed)) {
+                const validLocal = parsed.filter(isNotDummyWish);
+                const combined = [...validLocal, ...validServerData];
+                const unique = Array.from(new Map(combined.map(item => [item.id, item])).values());
+                setWishes(unique);
+                return;
+              }
             } catch (e) {
               console.error(e);
             }
           }
-          setWishes(json.data);
+          setWishes(validServerData);
         }
       } catch (err) {
         const localStored = localStorage.getItem('tri_graduation_wishes');
         if (localStored) {
           try {
-            setWishes(JSON.parse(localStored));
+            const parsed = JSON.parse(localStored);
+            if (Array.isArray(parsed)) {
+              setWishes(parsed.filter(isNotDummyWish));
+            }
           } catch (e) {
             console.error(e);
           }
@@ -435,13 +444,18 @@ export default function GuestbookSection() {
                 scrollbarColor: '#cbd5e1 transparent',
               }}
             >
-              {wishes.map((wish) => {
-                const photoIdx = postPhotoIndexes[wish.id] || 0;
-                const hasPhotos = wish.images && wish.images.length > 0;
-                const attLabel = getAttendanceLabel(wish.attendance);
+              {wishes.length === 0 ? (
+                <div className="py-12 px-4 text-center text-slate-500 font-serif italic text-xs sm:text-sm bg-white">
+                  Chưa có lời chúc nào. Hãy là người đầu tiên gửi lời chúc tốt đẹp đến Trí Nguyễn nhé! ✨
+                </div>
+              ) : (
+                wishes.map((wish) => {
+                  const photoIdx = postPhotoIndexes[wish.id] || 0;
+                  const hasPhotos = wish.images && wish.images.length > 0;
+                  const attLabel = getAttendanceLabel(wish.attendance);
 
-                return (
-                  <article key={wish.id} className="bg-white mb-3 first:mt-0 last:mb-0 shadow-sm border-b border-slate-100">
+                  return (
+                    <article key={wish.id} className="bg-white mb-3 first:mt-0 last:mb-0 shadow-sm border-b border-slate-100">
                     {/* Header bài đăng */}
                     <div className="p-3 flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
@@ -542,7 +556,7 @@ export default function GuestbookSection() {
                     </div>
                   </article>
                 );
-              })}
+              }))}
             </div>
 
             {/* Chỉ dẫn cuộn dưới chân khung */}

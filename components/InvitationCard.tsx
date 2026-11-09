@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
-import { Mail, Sparkles, Heart, CheckCircle2, Camera, X, ZoomIn } from 'lucide-react';
+import { Mail, Sparkles, Heart, CheckCircle2, Camera, X, ZoomIn, GraduationCap } from 'lucide-react';
 import { GRADUATE_INFO } from '@/data/initialData';
 import { SiteConfig, GuestItem, SidePhotoItem } from '@/types';
 
@@ -55,34 +55,63 @@ export default function InvitationCard({
   const isBeforeDeadline = new Date() < new Date('2026-11-14T00:00:00+07:00');
   const showSecretLetterButton = hasSecretLetter && isBeforeDeadline;
 
-  // Lấy danh sách ảnh bên trái & phải từ cấu hình (hoặc fallback mặc định)
-  const leftPhotos = siteConfig?.sidePhotosLeft || [
-    { id: 'l-1', src: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=600&q=80', rotate: -7, position: 'left', top: '3%' },
-    { id: 'l-2', src: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&w=600&q=80', rotate: 8, position: 'left', top: '38%' },
-    { id: 'l-3', src: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=600&q=80', rotate: -10, position: 'left', top: '72%' },
-  ];
+  // Lấy danh sách ảnh bên trái & phải từ cấu hình (mặc định rỗng)
+  const rawLeft = siteConfig?.sidePhotosLeft ?? [];
+  const rawRight = siteConfig?.sidePhotosRight ?? [];
 
-  const rightPhotos = siteConfig?.sidePhotosRight || [
-    { id: 'r-1', src: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=600&q=80', rotate: 9, position: 'right', top: '5%' },
-    { id: 'r-2', src: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=600&q=80', rotate: -6, position: 'right', top: '40%' },
-    { id: 'r-3', src: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80', rotate: 11, position: 'right', top: '75%' },
-  ];
+  // Tự động phân bổ đều 2 bên nếu 1 bên có nhiều ảnh còn bên kia không có
+  let leftPhotos = [...rawLeft];
+  let rightPhotos = [...rawRight];
 
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ['start end', 'end start'],
-  });
+  if (rawLeft.length === 0 && rawRight.length > 1) {
+    const half = Math.ceil(rawRight.length / 2);
+    leftPhotos = rawRight.slice(half);
+    rightPhotos = rawRight.slice(0, half);
+  } else if (rawRight.length === 0 && rawLeft.length > 1) {
+    const half = Math.ceil(rawLeft.length / 2);
+    rightPhotos = rawLeft.slice(half);
+    leftPhotos = rawLeft.slice(0, half);
+  }
 
-  const yLeft1 = useTransform(scrollYProgress, [0, 1], [-25, 35]);
-  const yLeft2 = useTransform(scrollYProgress, [0, 1], [25, -30]);
-  const yLeft3 = useTransform(scrollYProgress, [0, 1], [-20, 35]);
+  // Hàm tính toán vị trí, góc xoay & nhịp trôi nổi cho từng ảnh
+  // ĐẢM BẢO: Trôi nổi ngẫu nhiên, chia đều 2 bên và KHÔNG BAO GIỜ BỊ DÍNH NHAU
+  const getPhotoLayout = (idx: number, total: number, side: 'left' | 'right') => {
+    // 1. Phân bổ khoảng cách đứng (top %) đều đặn từ trên xuống dưới
+    let topPercent: number;
+    if (total <= 1) {
+      topPercent = side === 'left' ? 42 : 48;
+    } else {
+      const start = side === 'left' ? 4 : 7;
+      const end = side === 'left' ? 84 : 88;
+      const step = (end - start) / (total - 1);
+      topPercent = start + idx * step;
+    }
 
-  const yRight1 = useTransform(scrollYProgress, [0, 1], [-20, 30]);
-  const yRight2 = useTransform(scrollYProgress, [0, 1], [25, -35]);
-  const yRight3 = useTransform(scrollYProgress, [0, 1], [-15, 35]);
+    // 2. Góc nghiêng ngẫu nhiên tự nhiên
+    const leftAngles = [-7.5, 6, -9.5, 8, -6.5, 8.5, -8, 7];
+    const rightAngles = [8.5, -7, 9, -8.5, 7, -6.5, 8, -9];
+    const baseRotate = side === 'left' 
+      ? leftAngles[idx % leftAngles.length]
+      : rightAngles[idx % rightAngles.length];
 
-  const leftYTransforms = [yLeft1, yLeft2, yLeft3];
-  const rightYTransforms = [yRight1, yRight2, yRight3];
+    // 3. Vị trí ngang: so le zigzag (xen kẽ gần - xa) để tạo chiều sâu thị giác
+    const isOuter = side === 'left' ? idx % 2 === 0 : idx % 2 === 1;
+    const horizontalClass = side === 'left'
+      ? (isOuter ? 'left-0.5 xs:left-2 sm:-left-36 md:-left-44 lg:-left-52' : '-left-2 xs:left-0 sm:-left-28 md:-left-36 lg:-left-40')
+      : (isOuter ? 'right-0.5 xs:right-2 sm:-right-36 md:-right-44 lg:-right-52' : '-right-2 xs:right-0 sm:-right-28 md:-right-36 lg:-right-40');
+
+    // 4. Thời gian trôi nổi khác nhau cho từng bức ảnh
+    const duration = 4.2 + ((idx * 0.7) % 2.5);
+    const delay = (idx * 0.35) % 1.5;
+
+    return {
+      topPercent,
+      baseRotate,
+      horizontalClass,
+      duration,
+      delay,
+    };
+  };
 
   const handleScrollToGuestbook = () => {
     const el = document.getElementById('guestbook');
@@ -99,72 +128,92 @@ export default function InvitationCard({
       {/* Vệt sáng spotlight từ trên chiếu xuống lá thư */}
       <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-80 sm:w-[500px] h-96 bg-gradient-to-b from-white/35 via-white/10 to-transparent blur-3xl pointer-events-none rounded-full" />
 
-      {/* ================= ẢNH XUNG QUANH THƯ: BỎ KHUNG TRẮNG, ĐONG ĐƯA QUA LẠI CẢ Ở MOBILE ================= */}
+      {/* ================= ẢNH XUNG QUANH THƯ: TRÔI NỔI TỰ NHIÊN, TRẢI ĐỀU 2 BÊN, KHÔNG DÍNH NHAU ================= */}
       {/* Cụm ảnh bên Trái */}
-      {leftPhotos.map((photo, idx) => (
-        <motion.div
-          key={`side-l-${photo.id || idx}`}
-          animate={{
-            rotate: [(photo.rotate || -7) - 3.5, (photo.rotate || -7) + 3.5, (photo.rotate || -7) - 1.5, photo.rotate || -7],
-            y: [-7, 7, -4, 0],
-            x: [-8, 8, -4, 0],
-          }}
-          transition={{
-            duration: 4.2 + idx * 0.8,
-            repeat: Infinity,
-            repeatType: 'reverse',
-            ease: 'easeInOut',
-          }}
-          onClick={() => setZoomedPhoto(photo.src)}
-          className={`absolute rounded-2xl overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.3)] border border-white/50 cursor-pointer pointer-events-auto hover:scale-108 group transition-all z-0
-            w-24 xs:w-28 sm:w-36 lg:w-44
-            ${idx === 0 ? 'top-[4%] left-1 sm:-left-36' : ''}
-            ${idx === 1 ? 'top-[40%] -left-3 sm:-left-44' : ''}
-            ${idx === 2 ? 'top-[75%] left-1 sm:-left-36' : ''}
-          `}
-          title="Bấm để phóng to xem ảnh"
-        >
-          <div className="relative aspect-[4/3] bg-slate-900">
-            <img src={photo.src} alt="Kỷ niệm Trí Nguyễn" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-            <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-              <ZoomIn className="w-4 h-4 sm:w-5 sm:h-5 drop-shadow" />
+      {leftPhotos.map((photo, idx) => {
+        const layout = getPhotoLayout(idx, leftPhotos.length, 'left');
+        return (
+          <motion.div
+            key={`side-l-${photo.id || idx}`}
+            style={{
+              top: `${layout.topPercent}%`,
+            }}
+            animate={{
+              rotate: [
+                layout.baseRotate - 2.5,
+                layout.baseRotate + 2.5,
+                layout.baseRotate - 1,
+                layout.baseRotate,
+              ],
+              y: [-6, 6, -3, 0],
+              x: [-4, 5, -2, 0],
+            }}
+            transition={{
+              duration: layout.duration,
+              delay: layout.delay,
+              repeat: Infinity,
+              repeatType: 'reverse',
+              ease: 'easeInOut',
+            }}
+            onClick={() => setZoomedPhoto(photo.src)}
+            className={`absolute rounded-2xl overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.3)] border border-white/60 cursor-pointer pointer-events-auto hover:scale-110 group transition-transform z-0
+              w-22 xs:w-26 sm:w-36 lg:w-44
+              ${layout.horizontalClass}
+            `}
+            title="Bấm để phóng to xem ảnh"
+          >
+            <div className="relative aspect-[4/3] bg-slate-900">
+              <img src={photo.src} alt="Kỷ niệm Trí Nguyễn" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+              <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                <ZoomIn className="w-4 h-4 sm:w-5 sm:h-5 drop-shadow" />
+              </div>
             </div>
-          </div>
-        </motion.div>
-      ))}
+          </motion.div>
+        );
+      })}
 
       {/* Cụm ảnh bên Phải */}
-      {rightPhotos.map((photo, idx) => (
-        <motion.div
-          key={`side-r-${photo.id || idx}`}
-          animate={{
-            rotate: [(photo.rotate || 8) + 3.5, (photo.rotate || 8) - 3.5, (photo.rotate || 8) + 1.5, photo.rotate || 8],
-            y: [7, -7, 4, 0],
-            x: [8, -8, 4, 0],
-          }}
-          transition={{
-            duration: 4.5 + idx * 0.7,
-            repeat: Infinity,
-            repeatType: 'reverse',
-            ease: 'easeInOut',
-          }}
-          onClick={() => setZoomedPhoto(photo.src)}
-          className={`absolute rounded-2xl overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.3)] border border-white/50 cursor-pointer pointer-events-auto hover:scale-108 group transition-all z-0
-            w-24 xs:w-28 sm:w-36 lg:w-44
-            ${idx === 0 ? 'top-[6%] right-1 sm:-right-36' : ''}
-            ${idx === 1 ? 'top-[42%] -right-3 sm:-right-44' : ''}
-            ${idx === 2 ? 'top-[77%] right-1 sm:-right-36' : ''}
-          `}
-          title="Bấm để phóng to xem ảnh"
-        >
-          <div className="relative aspect-[4/3] bg-slate-900">
-            <img src={photo.src} alt="Kỷ niệm Trí Nguyễn" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-            <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-              <ZoomIn className="w-4 h-4 sm:w-5 sm:h-5 drop-shadow" />
+      {rightPhotos.map((photo, idx) => {
+        const layout = getPhotoLayout(idx, rightPhotos.length, 'right');
+        return (
+          <motion.div
+            key={`side-r-${photo.id || idx}`}
+            style={{
+              top: `${layout.topPercent}%`,
+            }}
+            animate={{
+              rotate: [
+                layout.baseRotate + 2.5,
+                layout.baseRotate - 2.5,
+                layout.baseRotate + 1,
+                layout.baseRotate,
+              ],
+              y: [6, -6, 3, 0],
+              x: [4, -5, 2, 0],
+            }}
+            transition={{
+              duration: layout.duration,
+              delay: layout.delay,
+              repeat: Infinity,
+              repeatType: 'reverse',
+              ease: 'easeInOut',
+            }}
+            onClick={() => setZoomedPhoto(photo.src)}
+            className={`absolute rounded-2xl overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.3)] border border-white/60 cursor-pointer pointer-events-auto hover:scale-110 group transition-transform z-0
+              w-22 xs:w-26 sm:w-36 lg:w-44
+              ${layout.horizontalClass}
+            `}
+            title="Bấm để phóng to xem ảnh"
+          >
+            <div className="relative aspect-[4/3] bg-slate-900">
+              <img src={photo.src} alt="Kỷ niệm Trí Nguyễn" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+              <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                <ZoomIn className="w-4 h-4 sm:w-5 sm:h-5 drop-shadow" />
+              </div>
             </div>
-          </div>
-        </motion.div>
-      ))}
+          </motion.div>
+        );
+      })}
 
       {/* ================= THƯ MỜI: SCALE THEO PC VÀ MOBILE ================= */}
       <motion.div
@@ -187,12 +236,20 @@ export default function InvitationCard({
 
           <div className="relative z-10 flex items-center gap-3.5 sm:gap-6">
             {/* Ảnh của Trí Nguyễn bên trái */}
-            <div className="w-28 xs:w-32 sm:w-40 md:w-48 lg:w-52 aspect-[3/4] rounded-xl overflow-hidden border-2 border-white/90 shadow-md transform -rotate-2 flex-shrink-0 bg-slate-800">
-              <img
-                src={displayLetterImage}
-                alt="Trí Nguyễn"
-                className="w-full h-full object-cover"
-              />
+            <div className="w-28 xs:w-32 sm:w-40 md:w-48 lg:w-52 aspect-[3/4] rounded-xl overflow-hidden border-2 border-white/90 shadow-md transform -rotate-2 flex-shrink-0 bg-slate-800 flex items-center justify-center">
+              {displayLetterImage ? (
+                <img
+                  src={displayLetterImage}
+                  alt="Trí Nguyễn"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-3 text-center text-amber-200">
+                  <GraduationCap className="w-10 h-10 sm:w-14 sm:h-14 mb-2 text-amber-300" />
+                  <span className="font-serif text-[11px] sm:text-xs font-bold text-amber-100">Lễ Tốt Nghiệp</span>
+                  <span className="text-[10px] sm:text-[11px] text-amber-200/80">Trí Nguyễn</span>
+                </div>
+              )}
             </div>
 
             {/* Câu "Biết ơn vì..." chữ trắng (LUÔN CĂN TRÁI CẢ MOBILE VÀ PC) */}

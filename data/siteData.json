@@ -1,5 +1,5 @@
 {
-  "defaultLetterImage": "https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=800&q=80",
+  "defaultLetterImage": "",
   "venueName": "Trường Đại học Mở TP. Hồ Chí Minh (Cơ sở 1)",
   "venueAddress": "97 Võ Văn Tần, phường Xuân Hòa, TP.HCM",
   "googleMapUrl": "https://maps.app.goo.gl/jSbdfTx3FcCXRXdR6",
@@ -87,122 +87,9 @@
       "highlight": false
     }
   ],
-  "collections": [
-    {
-      "id": "col-1",
-      "title": "Những Ngày Đầu Bước Chân Vào Giảng Đường",
-      "coverImage": "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=800&q=80",
-      "description": "Những ngày bỡ ngỡ làm quen lớp mới, những giảng đường bậc thang ngập tràn nắng sớm.",
-      "badge": "Tân Sinh Viên • 2022",
-      "images": [
-        {
-          "url": "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
-          "caption": "Tiết học đầu tiên tại giảng đường lớn với những người bạn mới"
-        },
-        {
-          "url": "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=1200&q=80",
-          "caption": "Góc sân trường rợp bóng cây cổ thụ nơi tụ họp mỗi giờ giải lao"
-        }
-      ]
-    },
-    {
-      "id": "col-2",
-      "title": "Đồ Án, Deadline & Những Đêm Trắng 2AM",
-      "coverImage": "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&w=800&q=80",
-      "description": "Khoảng thời gian cày cuốc đồ án chuyên ngành, cùng đồng đội thức trắng đêm gõ code.",
-      "badge": "Kỷ Niệm Cày Cuốc • 2AM",
-      "images": [
-        {
-          "url": "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&w=1200&q=80",
-          "caption": "Bàn làm việc quen thuộc tại thư viện trường lúc nửa đêm"
-        },
-        {
-          "url": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80",
-          "caption": "Cùng nhóm bạn tranh luận hăng say cho bài thuyết trình kết thúc môn"
-        }
-      ]
-    },
-    {
-      "id": "col-3",
-      "title": "Chiến Dịch Mùa Hè Xanh & Chuyến Đi Thanh Xuân",
-      "coverImage": "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80",
-      "description": "Màu áo xanh tình nguyện in dấu trên những nẻo đường quê hương, những buổi lửa trại bập bùng.",
-      "badge": "Áo Xanh Tình Nguyện",
-      "images": [
-        {
-          "url": "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1200&q=80",
-          "caption": "Hội bạn thân trong chuyến đi tình nguyện hè về vùng quê xa"
-        },
-        {
-          "url": "https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1200&q=80",
-          "caption": "Đêm lửa trại ấm áp với tiếng hát và những lời tâm sự chân thành"
-        }
-      ]
-    },
-    {
-      "id": "col-4",
-      "title": "Khoảnh Khắc Kỷ Yếu & Hội Bạn Tri Kỷ",
-      "coverImage": "https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=800&q=80",
-      "description": "Những thước phim kỷ yếu ghi lại tuổi 22 rực rỡ nhất: áo cử nhân và nụ cười không bao giờ phai.",
-      "badge": "Kỷ Yếu • Class of 2026",
-      "images": [
-        {
-          "url": "https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=1200&q=80",
-          "caption": "Khoảnh khắc rực rỡ cùng bó hoa hướng dương trong ngày chụp kỷ yếu"
-        },
-        {
-          "url": "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1200&q=80",
-          "caption": "Tập thể lớp với niềm tự hào sau 4 năm đồng hành bền chặt"
-        }
-      ]
-    }
-  ],
-  "sidePhotosLeft": [
-    {
-      "id": "l-1",
-      "src": "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=600&q=80",
-      "rotate": -7,
-      "position": "left",
-      "top": "3%"
-    },
-    {
-      "id": "l-2",
-      "src": "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?auto=format&fit=crop&w=600&q=80",
-      "rotate": 8,
-      "position": "left",
-      "top": "38%"
-    },
-    {
-      "id": "l-3",
-      "src": "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=600&q=80",
-      "rotate": -10,
-      "position": "left",
-      "top": "72%"
-    }
-  ],
-  "sidePhotosRight": [
-    {
-      "id": "r-1",
-      "src": "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=600&q=80",
-      "rotate": 9,
-      "position": "right",
-      "top": "5%"
-    },
-    {
-      "id": "r-2",
-      "src": "https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=600&q=80",
-      "rotate": -6,
-      "position": "right",
-      "top": "40%"
-    },
-    {
-      "id": "r-3",
-      "src": "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80",
-      "rotate": 11,
-      "position": "right",
-      "top": "75%"
-    }
-  ],
+  "collections": [],
+  "sidePhotosLeft": [],
+  "sidePhotosRight": [],
   "guests": [
     {
       "id": "4",

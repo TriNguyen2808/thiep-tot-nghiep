@@ -10,13 +10,15 @@ interface SecretLetterModalProps {
   onClose: () => void;
   guestName: string;
   customLetterText?: string;
+  customLetterImage?: string;
 }
 
 export default function SecretLetterModal({ 
   isOpen, 
   onClose, 
   guestName, 
-  customLetterText 
+  customLetterText,
+  customLetterImage 
 }: SecretLetterModalProps) {
   useEffect(() => {
     if (isOpen) {
@@ -108,38 +110,29 @@ export default function SecretLetterModal({
               )}
             </div>
 
-            {/* 2 Khung ảnh kỷ niệm gọn gàng Y2K */}
-            <div className="mt-4 pt-3 border-t border-slate-200">
-              <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto">
-                {/* Ảnh Kỷ Niệm 1 */}
-                <div className="polaroid-card -rotate-1 relative border border-slate-200 !p-1.5 !pb-3">
+            {/* Khung ảnh kỷ niệm thật (nếu có) hoặc thông điệp thanh xuân */}
+            {customLetterImage ? (
+              <div className="mt-4 pt-3 border-t border-slate-200">
+                <div className="max-w-[240px] mx-auto polaroid-card -rotate-1 relative border border-slate-200 !p-2 !pb-3 shadow-md">
                   <div className="aspect-[4/3] rounded overflow-hidden bg-slate-100">
                     <img
-                      src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=400&q=80"
-                      alt="Khoảnh khắc 1"
+                      src={customLetterImage}
+                      alt="Khoảnh khắc kỷ niệm"
                       className="w-full h-full object-cover"
                     />
                   </div>
                   <p className="mt-1 text-center font-cursive text-xs text-navy-900">
-                    Thanh xuân rực rỡ
-                  </p>
-                </div>
-
-                {/* Ảnh Kỷ Niệm 2 */}
-                <div className="polaroid-card rotate-1 relative border border-slate-200 !p-1.5 !pb-3">
-                  <div className="aspect-[4/3] rounded overflow-hidden bg-slate-100">
-                    <img
-                      src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=400&q=80"
-                      alt="Khoảnh khắc 2"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <p className="mt-1 text-center font-cursive text-xs text-navy-900">
-                    Mãi là bạn tốt
+                    Kỷ niệm cùng {guestName || 'bạn'} ✨
                   </p>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-center gap-2 text-xs font-serif italic text-slate-500">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>Khoảnh khắc tốt nghiệp lưu dấu thanh xuân</span>
+                <Sparkles className="w-4 h-4 text-amber-500" />
+              </div>
+            )}
 
             {/* Footer Thư: Chữ ký & Nút Gấp Thư */}
             <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-200">

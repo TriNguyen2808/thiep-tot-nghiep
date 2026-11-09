@@ -15,7 +15,7 @@ interface TimelineSectionProps {
 
 export default function TimelineSection({ siteConfig }: TimelineSectionProps) {
   // Target: 10:30 ngày 14/11/2026 (GMT+7)
-  const targetDateStr = '2026-11-14T10:30:00+07:00';
+  const targetDateStr = siteConfig?.countdownTarget || '2026-11-14T10:30:00+07:00';
   const [timeLeft, setTimeLeft] = useState<{
     days: number;
     hours: number;
@@ -252,7 +252,7 @@ export default function TimelineSection({ siteConfig }: TimelineSectionProps) {
         </div>
 
         {/* Danh sách các bãi xe - Nhấn vào cả ô để mở Google Maps */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {parkingLocations.map((loc, idx) => {
             const inner = (
               <div>

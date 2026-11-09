@@ -22,6 +22,7 @@ function GraduationInvitationContent() {
   const [guestId, setGuestId] = useState<string>('');
   const [guestName, setGuestName] = useState<string>('');
   const [secretLetterText, setSecretLetterText] = useState<string>('');
+  const [secretLetterImage, setSecretLetterImage] = useState<string>('');
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [isMusicRequested, setIsMusicRequested] = useState(true); // Tự động phát ngay từ đầu
 
@@ -85,6 +86,11 @@ function GraduationInvitationContent() {
         if (matched.secretLetter) {
           setSecretLetterText(matched.secretLetter);
         }
+        if (matched.customLetterImage && matched.customLetterImage.trim() !== '') {
+          setSecretLetterImage(matched.customLetterImage);
+        } else if (siteConfig.defaultLetterImage && siteConfig.defaultLetterImage.trim() !== '') {
+          setSecretLetterImage(siteConfig.defaultLetterImage);
+        }
       }
     }
   }, [siteConfig, guestId, guestName]);
@@ -138,6 +144,7 @@ function GraduationInvitationContent() {
         onClose={() => setShowSecretLetter(false)}
         guestName={guestName}
         customLetterText={secretLetterText}
+        customLetterImage={secretLetterImage}
       />
 
       {/* 5. Screen Timeline (Đồng hồ đếm ngược đến 10:30 ngày 14/11/2026, địa chỉ Maps, nhiều số liên hệ, bãi xe) */}

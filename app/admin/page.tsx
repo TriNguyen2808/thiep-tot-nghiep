@@ -1082,7 +1082,7 @@ export default function AdminPage() {
                     const newCol: CollectionItem = {
                       id: `col-${Date.now()}`,
                       title: 'Album mới',
-                      coverImage: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=800&q=80',
+                      coverImage: '',
                       description: 'Mô tả album',
                       badge: 'Kỷ Niệm',
                       images: []
@@ -1321,14 +1321,85 @@ export default function AdminPage() {
         {activeTab === 'photos' && (
           <div className="space-y-6">
             <div className="bg-[#0B1E36] p-5 sm:p-6 rounded-2xl border border-amber-400/30 shadow-md space-y-6">
-              <div>
-                <h2 className="font-serif text-base font-bold text-amber-300 flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5" />
-                  Cấu Hình Các Ảnh Kỷ Niệm Đong Đưa Xung Quanh Lá Thư
-                </h2>
-                <p className="text-xs text-slate-300 mt-0.5">
-                  Các bức ảnh này hiển thị đong đưa mềm mại 2 bên cánh gà và phía sau thư trên điện thoại & máy tính. Bạn có thể chọn và tải lên nhiều ảnh cùng lúc!
-                </p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-serif text-base font-bold text-amber-300 flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5" />
+                    Cấu Hình Các Ảnh Kỷ Niệm Đong Đưa Xung Quanh Lá Thư
+                  </h2>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    Ảnh hiển thị đong đưa mềm mại 2 bên cánh gà thiệp. Hệ thống tự động tính khoảng cách trải đều ngẫu nhiên, không bị dính vào nhau!
+                  </p>
+                </div>
+
+                {/* NÚT TẢI LÊN MASTER: TỰ ĐỘNG CHIA ĐỀU 2 BÊN */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    id="upload-side-both-balanced"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const files = e.target.files;
+                      if (!files || files.length === 0) return;
+                      const urls = await uploadFilesToServer(files);
+                      if (urls.length > 0) {
+                        const newLeft: SidePhotoItem[] = [];
+                        const newRight: SidePhotoItem[] = [];
+                        urls.forEach((url, i) => {
+                          const item: SidePhotoItem = {
+                            id: `side-${Date.now()}-${i}`,
+                            src: url,
+                            rotate: i % 2 === 0 ? -7 : 8,
+                            position: i % 2 === 0 ? 'left' : 'right',
+                            top: '50%',
+                          };
+                          if (i % 2 === 0) {
+                            newLeft.push(item);
+                          } else {
+                            newRight.push(item);
+                          }
+                        });
+                        setConfig({
+                          ...config,
+                          sidePhotosLeft: [...config.sidePhotosLeft, ...newLeft],
+                          sidePhotosRight: [...config.sidePhotosRight, ...newRight],
+                        });
+                        showStatus(`Đã tải lên ${urls.length} ảnh và tự động chia đều 2 bên!`, 'success');
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor="upload-side-both-balanced"
+                    className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-navy-950 font-serif font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all"
+                  >
+                    <Upload className="w-4 h-4 text-navy-950" />
+                    <span>Tải Lên Ảnh Mới (Tự Động Chia Đều 2 Bên)</span>
+                  </label>
+
+                  {(config.sidePhotosLeft.length + config.sidePhotosRight.length > 1) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allPhotos = [...config.sidePhotosLeft, ...config.sidePhotosRight];
+                        const half = Math.ceil(allPhotos.length / 2);
+                        const left = allPhotos.slice(0, half).map((p) => ({ ...p, position: 'left' as const }));
+                        const right = allPhotos.slice(half).map((p) => ({ ...p, position: 'right' as const }));
+                        setConfig({
+                          ...config,
+                          sidePhotosLeft: left,
+                          sidePhotosRight: right,
+                        });
+                        showStatus(`Đã cân bằng lại: Bên trái ${left.length} ảnh, bên phải ${right.length} ảnh!`, 'success');
+                      }}
+                      className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-400/40 text-xs font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Cân bằng lại số lượng ảnh đều 2 bên"
+                    >
+                      <span>⚖️ Chia Đều Lại 2 Bên</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Nhóm ảnh bên trái */}
@@ -1350,9 +1421,9 @@ export default function AdminPage() {
                           const newSidePhotos: SidePhotoItem[] = urls.map((u, i) => ({
                             id: `l-${Date.now()}-${i}`,
                             src: u,
-                            rotate: i % 2 === 0 ? -7 - i : 8 + i,
+                            rotate: i % 2 === 0 ? -7 : 8,
                             position: 'left',
-                            top: `${Math.min(90, 5 + i * 30)}%`,
+                            top: '50%',
                           }));
                           setConfig({
                             ...config,
@@ -1367,7 +1438,7 @@ export default function AdminPage() {
                       className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-serif font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow"
                     >
                       <Upload className="w-3.5 h-3.5" />
-                      <span>Tải Lên Nhiều Ảnh Bên Trái</span>
+                      <span>Thêm Riêng Vào Bên Trái</span>
                     </label>
                   </div>
                 </div>
@@ -1377,6 +1448,25 @@ export default function AdminPage() {
                     <div key={photo.id || i} className="p-3 rounded-xl bg-slate-900 border border-slate-700 space-y-2 relative">
                       <div className="aspect-[4/3] rounded-lg overflow-hidden border border-slate-700 bg-slate-800 relative">
                         <img src={photo.src} alt="" className="w-full h-full object-cover" />
+                        
+                        {/* Nút chuyển sang bên Phải */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const targetPhoto = { ...photo, position: 'right' as const };
+                            setConfig({
+                              ...config,
+                              sidePhotosLeft: config.sidePhotosLeft.filter((_, idx) => idx !== i),
+                              sidePhotosRight: [...config.sidePhotosRight, targetPhoto],
+                            });
+                            showStatus('Đã chuyển ảnh sang bên Phải!', 'success');
+                          }}
+                          className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-blue-600/90 hover:bg-blue-500 text-white text-[10px] font-mono shadow cursor-pointer flex items-center gap-1"
+                          title="Chuyển ảnh này sang bên Phải"
+                        >
+                          <span>Sang Phải ➡️</span>
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => {
@@ -1450,9 +1540,9 @@ export default function AdminPage() {
                           const newSidePhotos: SidePhotoItem[] = urls.map((u, i) => ({
                             id: `r-${Date.now()}-${i}`,
                             src: u,
-                            rotate: i % 2 === 0 ? 9 + i : -6 - i,
+                            rotate: i % 2 === 0 ? 8 : -7,
                             position: 'right',
-                            top: `${Math.min(90, 5 + i * 30)}%`,
+                            top: '50%',
                           }));
                           setConfig({
                             ...config,
@@ -1467,7 +1557,7 @@ export default function AdminPage() {
                       className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-serif font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow"
                     >
                       <Upload className="w-3.5 h-3.5" />
-                      <span>Tải Lên Nhiều Ảnh Bên Phải</span>
+                      <span>Thêm Riêng Vào Bên Phải</span>
                     </label>
                   </div>
                 </div>
@@ -1477,6 +1567,25 @@ export default function AdminPage() {
                     <div key={photo.id || i} className="p-3 rounded-xl bg-slate-900 border border-slate-700 space-y-2 relative">
                       <div className="aspect-[4/3] rounded-lg overflow-hidden border border-slate-700 bg-slate-800 relative">
                         <img src={photo.src} alt="" className="w-full h-full object-cover" />
+                        
+                        {/* Nút chuyển sang bên Trái */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const targetPhoto = { ...photo, position: 'left' as const };
+                            setConfig({
+                              ...config,
+                              sidePhotosRight: config.sidePhotosRight.filter((_, idx) => idx !== i),
+                              sidePhotosLeft: [...config.sidePhotosLeft, targetPhoto],
+                            });
+                            showStatus('Đã chuyển ảnh sang bên Trái!', 'success');
+                          }}
+                          className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-blue-600/90 hover:bg-blue-500 text-white text-[10px] font-mono shadow cursor-pointer flex items-center gap-1"
+                          title="Chuyển ảnh này sang bên Trái"
+                        >
+                          <span>⬅️ Sang Trái</span>
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => {

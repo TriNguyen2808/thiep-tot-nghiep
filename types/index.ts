@@ -80,6 +80,7 @@ export interface SiteConfig {
   venueAddress: string;
   googleMapUrl: string;
   graduationDate: string;
+  countdownTarget?: string;
   contacts: ContactPerson[];
   parkingLocations: ParkingLocation[];
   timeline: TimelineMilestone[];

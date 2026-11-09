@@ -56,67 +56,76 @@ export default function GallerySection({ collections }: GallerySectionProps) {
       </div>
 
       {/* Grid các ô Bộ sưu tập: XEM ĐƯỢC 2 BỘ SƯU TẬP TRÊN 1 DÒNG KHI XEM BẰNG ĐIỆN THOẠI (grid-cols-2) */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 xs:gap-3.5 sm:gap-6">
-        {displayCollections.map((col, idx) => (
-          <motion.div
-            key={col.id}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: idx * 0.08 }}
-            whileHover={{ y: -6 }}
-            onClick={() => handleOpenCollection(col)}
-            className="polaroid-card cursor-pointer group relative flex flex-col justify-between border border-slate-200/90 !p-2 !pb-3 sm:!p-3 sm:!pb-5 rounded-lg"
-            style={{
-              transform: `rotate(${idx % 2 === 0 ? -1.2 : 1.2}deg)`,
-            }}
-          >
-            {/* Washi Tape Y2K dán trên đầu card */}
-            <div
-              className={`washi-tape -top-2 ${
-                idx % 2 === 0 ? 'left-2 -rotate-6' : 'right-2 rotate-6 washi-tape-blue'
-              } !w-16 sm:!w-20 !h-4 text-[7px] sm:text-[8px] font-bold text-navy-950 flex items-center justify-center uppercase tracking-tighter`}
+      {displayCollections.length === 0 ? (
+        <div className="text-center py-12 px-4 bg-white/70 backdrop-blur-md rounded-2xl border border-white/60 shadow-sm max-w-lg mx-auto">
+          <Camera className="w-12 h-12 text-[#27A4F2] mx-auto mb-3 opacity-60" />
+          <p className="text-slate-700 font-medium text-sm">
+            Bộ sưu tập ảnh kỷ niệm đang được cập nhật. Bạn hãy quay lại sau nhé! 📸✨
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 xs:gap-3.5 sm:gap-6">
+          {displayCollections.map((col, idx) => (
+            <motion.div
+              key={col.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: idx * 0.08 }}
+              whileHover={{ y: -6 }}
+              onClick={() => handleOpenCollection(col)}
+              className="polaroid-card cursor-pointer group relative flex flex-col justify-between border border-slate-200/90 !p-2 !pb-3 sm:!p-3 sm:!pb-5 rounded-lg"
+              style={{
+                transform: `rotate(${idx % 2 === 0 ? -1.2 : 1.2}deg)`,
+              }}
             >
-              ★ ALBUM 0{idx + 1} ★
-            </div>
-
-            {/* 1 Ảnh đại diện của Bộ sưu tập */}
-            <div className="relative aspect-[4/5] rounded overflow-hidden bg-slate-100 mb-2">
-              <img
-                src={col.coverImage}
-                alt={col.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-              />
-
-              <div className="absolute top-1.5 left-1.5">
-                <span className="text-[7.5px] sm:text-[9px] font-mono font-bold bg-[#27A4F2] text-white px-1.5 sm:px-2 py-0.5 rounded shadow-sm">
-                  {col.badge}
-                </span>
+              {/* Washi Tape Y2K dán trên đầu card */}
+              <div
+                className={`washi-tape -top-2 ${
+                  idx % 2 === 0 ? 'left-2 -rotate-6' : 'right-2 rotate-6 washi-tape-blue'
+                } !w-16 sm:!w-20 !h-4 text-[7px] sm:text-[8px] font-bold text-navy-950 flex items-center justify-center uppercase tracking-tighter`}
+              >
+                ★ ALBUM 0{idx + 1} ★
               </div>
 
-              {/* Nút xem chi tiết khi hover */}
-              <div className="absolute inset-0 bg-navy-950/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <span className="px-2 sm:px-3 py-1 rounded-full bg-white text-navy-950 font-bold text-[10px] sm:text-xs shadow-md flex items-center gap-1">
-                  <ZoomIn className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  Mở {col.images.length} Ảnh
-                </span>
+              {/* 1 Ảnh đại diện của Bộ sưu tập */}
+              <div className="relative aspect-[4/5] rounded overflow-hidden bg-slate-100 mb-2">
+                <img
+                  src={col.coverImage}
+                  alt={col.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                />
+
+                <div className="absolute top-1.5 left-1.5">
+                  <span className="text-[7.5px] sm:text-[9px] font-mono font-bold bg-[#27A4F2] text-white px-1.5 sm:px-2 py-0.5 rounded shadow-sm">
+                    {col.badge}
+                  </span>
+                </div>
+
+                {/* Nút xem chi tiết khi hover */}
+                <div className="absolute inset-0 bg-navy-950/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="px-2 sm:px-3 py-1 rounded-full bg-white text-navy-950 font-bold text-[10px] sm:text-xs shadow-md flex items-center gap-1">
+                    <ZoomIn className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    Mở {col.images.length} Ảnh
+                  </span>
+                </div>
+
+                <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 text-[8px] sm:text-[10px] font-mono text-white bg-black/60 px-1.5 py-0.5 rounded">
+                  <Layers className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                  <span>{col.images.length}</span>
+                </div>
               </div>
 
-              <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 text-[8px] sm:text-[10px] font-mono text-white bg-black/60 px-1.5 py-0.5 rounded">
-                <Layers className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                <span>{col.images.length}</span>
+              {/* Tiêu đề thể hiện cho Bộ sưu tập */}
+              <div className="text-center pt-1 border-t border-slate-100">
+                <h3 className="font-serif text-xs sm:text-sm font-bold text-navy-950 line-clamp-2 leading-tight">
+                  {col.title}
+                </h3>
               </div>
-            </div>
-
-            {/* Tiêu đề thể hiện cho Bộ sưu tập */}
-            <div className="text-center pt-1 border-t border-slate-100">
-              <h3 className="font-serif text-xs sm:text-sm font-bold text-navy-950 line-clamp-2 leading-tight">
-                {col.title}
-              </h3>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       {/* MODAL CỬA SỔ CÁC ẢNH TRONG BỘ SƯU TẬP (LIGHTBOX) */}
       <AnimatePresence>

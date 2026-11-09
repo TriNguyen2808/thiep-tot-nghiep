@@ -5,8 +5,8 @@ import { Calendar, Clock, Plus, Check, Bell } from 'lucide-react';
 import { GRADUATE_INFO } from '@/data/initialData';
 
 export default function CountdownTimer() {
-  // Ngày tốt nghiệp: 15/11/2026 08:00
-  const targetDate = new Date('2026-11-15T08:00:00+07:00').getTime();
+  // Ngày tốt nghiệp: 14/11/2026 10:30
+  const targetDate = new Date('2026-11-14T10:30:00+07:00').getTime();
 
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
@@ -42,7 +42,7 @@ export default function CountdownTimer() {
   // Tạo link thêm sự kiện vào Google Calendar
   const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
     'Lễ Tốt Nghiệp • Trí Nguyễn'
-  )}&dates=20261115T010000Z/20261115T053000Z&details=${encodeURIComponent(
+  )}&dates=20261114T033000Z/20261114T053000Z&details=${encodeURIComponent(
     'Lễ tốt nghiệp đại học của Trí Nguyễn. Rất mong bạn có mặt để cùng Trí lưu giữ khoảnh khắc thanh xuân đáng nhớ này!'
   )}&location=${encodeURIComponent(GRADUATE_INFO.venue + ', ' + GRADUATE_INFO.address)}`;
 
