@@ -1,5 +1,5 @@
 {
-  "defaultLetterImage": "https://raw.githubusercontent.com/TriNguyen2808/thiep-tot-nghiep/main/public/uploads/1794472234946_vt6qk_IMG_5227.jpg",
+  "defaultLetterImage": "https://raw.githubusercontent.com/TriNguyen2808/thiep-tot-nghiep/main/public/uploads/1794472342995_zwgdn_IMG_5227.jpg",
   "venueName": "Trường Đại học Mở TP. Hồ Chí Minh (Cơ sở 1)",
   "venueAddress": "97 Võ Văn Tần, phường Xuân Hòa, TP.HCM",
   "googleMapUrl": "https://maps.app.goo.gl/jSbdfTx3FcCXRXdR6",
@@ -373,6 +373,14 @@
     }
   ],
   "guests": [
+    {
+      "id": "149",
+      "name": "anh Vĩnh Khang",
+      "secretLetter": "",
+      "customLetterImage": "",
+      "note": "",
+      "createdAt": "2026-11-12T08:38:23.605Z"
+    },
     {
       "id": "4",
       "name": "chị Minh Đăng",
