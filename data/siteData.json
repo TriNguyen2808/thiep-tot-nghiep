@@ -375,11 +375,11 @@
   "guests": [
     {
       "id": "158",
-      "name": "Anh Thư",
-      "secretLetter": "Hỡi những cô nàng \"snake\" của tôi ơi, thư này tui muốn gửi riêng đến mấy bà. Cảm ơn mấy bà đã ở bên tui những lúc buồn vui, đồng cảm với tui trong lúc khó khăn. Mấy bà cũng là một phần động lực để tui cố gắng, phát triển từng ngày (tại tui hơn thua tui k muốn thua mấy bà). Văn của tui chỉ được nhiêu đây thui, nhưng mà ngắn gọn là tui quý mấy bà lắm, được đồng hành cùng mấy bà tui rất vinh dự, trân trọng. ",
-      "customLetterImage": "https://raw.githubusercontent.com/TriNguyen2808/thiep-tot-nghiep/main/public/uploads/1794503809157_kurbl_1794503776063_2078400915348512.jpg",
+      "name": "bạn Khoa",
+      "secretLetter": "",
+      "customLetterImage": "",
       "note": "",
-      "createdAt": "2026-11-12T17:15:37.056Z"
+      "createdAt": "2026-11-12T17:28:33.946Z"
     },
     {
       "id": "157",
