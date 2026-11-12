@@ -78,7 +78,7 @@ export default function TimelineSection({ siteConfig }: TimelineSectionProps) {
           <Clock className="w-3.5 h-3.5 text-white" />
           Thời Gian & Địa Điểm
         </div>
-        <h2 className="font-serif text-2xl sm:text-4xl font-extrabold text-[#061C38] tracking-tight drop-shadow-sm">
+        <h2 className="font-serif text-[15px] sm:text-3xl md:text-4xl font-extrabold text-[#061C38] tracking-tight drop-shadow-sm whitespace-nowrap">
           THỜI KHẮC VINH DANH & HỘI TRƯỜNG
         </h2>
         <div className="w-20 h-1 bg-gradient-to-r from-transparent via-[#27A4F2] to-transparent mx-auto mt-2 rounded-full" />
@@ -182,9 +182,6 @@ export default function TimelineSection({ siteConfig }: TimelineSectionProps) {
               <span>{address}</span>
               <ExternalLink className="w-3.5 h-3.5 text-blue-600 flex-shrink-0 mt-0.5" />
             </a>
-            <span className="block text-[11px] font-mono text-emerald-600 mt-2">
-              👉 Bấm vào địa chỉ để mở Google Maps chỉ đường
-            </span>
           </div>
 
           {/* LIÊN HỆ (CÓ THỂ NHIỀU SỐ ĐIỆN THOẠI, TÊN ỨNG VỚI TỪNG SỐ) */}

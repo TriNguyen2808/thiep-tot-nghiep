@@ -53,20 +53,13 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { name, attendance, message, images, isPublic } = body;
 
-    if (!message || !message.trim()) {
-      return NextResponse.json(
-        { success: false, error: 'Vui lòng nhập lời chúc!' },
-        { status: 400 }
-      );
-    }
-
     const finalName = isPublic ? (name?.trim() || 'Bạn Thân Mến') : 'Một người bạn ẩn danh 🤫';
 
     const newWish: Wish = {
       id: `wish-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       name: finalName,
       attendance: attendance || 'yes',
-      message: message.trim(),
+      message: (message || '').trim(),
       images: Array.isArray(images) ? images : [],
       isPublic: Boolean(isPublic),
       likes: 0,

@@ -33,3 +33,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Bỏ qua dữ liệu khách và lời chúc
+data/*.json

@@ -53,8 +53,8 @@ export interface SidePhotoItem {
   id: string;
   src: string;
   rotate: number;
-  position: 'left' | 'right';
-  top: string;
+  position?: 'left' | 'right';
+  top?: string;
 }
 
 export interface GuestItem {

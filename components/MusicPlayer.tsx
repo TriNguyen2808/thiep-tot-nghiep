@@ -14,21 +14,19 @@ export default function MusicPlayer({ isAutoPlayRequested }: MusicPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasStartedRef = useRef(false);
 
-  // Mốc thời gian cắt 15 giây đầu theo yêu cầu
-  const START_OFFSET_SECONDS = 15;
+  // Mốc thời gian bắt đầu: phát từ đầu (0 giây) vì file nhạc đã được chỉnh sửa
+  const START_OFFSET_SECONDS = 0;
   const PRIMARY_AUDIO_SRC = '/audio/nhu-ngay-hom-qua.mp3';
   const FALLBACK_AUDIO_SRC = encodeURI('/audio/Như Ngày Hôm Qua - Sơn Tùng M-TP.mp3');
 
-  // Hàm phát nhạc xuất phát từ giây thứ 15
-  const playFromOffset = useCallback((offset = START_OFFSET_SECONDS) => {
+  // Hàm phát nhạc từ đầu bài
+  const playFromOffset = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const execute = () => {
       try {
-        if (audio.currentTime < offset) {
-          audio.currentTime = offset;
-        }
+        audio.currentTime = 0;
       } catch (e) {
         console.warn('Set audio currentTime info:', e);
       }
@@ -42,12 +40,10 @@ export default function MusicPlayer({ isAutoPlayRequested }: MusicPlayerProps) {
           })
           .catch((err) => {
             console.warn('Autoplay restricted by browser, waiting for user touch:', err);
-            // Nếu trình duyệt chặn phát tự động không có tương tác, phát ngay khi người dùng chạm vào màn hình
+            // Nếu trình duyệt trên điện thoại chặn phát tự động, phát ngay khi người dùng chạm vào màn hình
             const onUserGesture = () => {
               try {
-                if (audio.currentTime < offset) {
-                  audio.currentTime = offset;
-                }
+                audio.currentTime = 0;
                 audio
                   .play()
                   .then(() => {
@@ -77,16 +73,19 @@ export default function MusicPlayer({ isAutoPlayRequested }: MusicPlayerProps) {
       audio.addEventListener('canplay', execute, { once: true });
       execute();
     }
-  }, [START_OFFSET_SECONDS]);
+  }, []);
+
+  // Nhạc phát bình thường từ đầu
+  const handleTimeUpdate = () => {};
 
   // TỰ ĐỘNG PHÁT NGAY TỪ KHI VÀO LINK (Không cần đợi sau khi radio đếm ngược)
   useEffect(() => {
     if (!hasStartedRef.current) {
-      playFromOffset(START_OFFSET_SECONDS);
+      playFromOffset();
     }
 
     const handleStartBgmEvent = () => {
-      playFromOffset(START_OFFSET_SECONDS);
+      playFromOffset();
     };
 
     window.addEventListener('app:start-bgm', handleStartBgmEvent);
@@ -94,14 +93,14 @@ export default function MusicPlayer({ isAutoPlayRequested }: MusicPlayerProps) {
     return () => {
       window.removeEventListener('app:start-bgm', handleStartBgmEvent);
     };
-  }, [playFromOffset, START_OFFSET_SECONDS]);
+  }, [playFromOffset]);
 
-  // Bắt đầu lại từ giây 15 khi phát hết bài
+  // Lặp lại từ đầu khi phát hết bài
   const handleEnded = () => {
     const audio = audioRef.current;
     if (audio) {
       try {
-        audio.currentTime = START_OFFSET_SECONDS;
+        audio.currentTime = 0;
         audio.play().catch(console.warn);
       } catch {
         audio.play().catch(console.warn);
@@ -117,14 +116,10 @@ export default function MusicPlayer({ isAutoPlayRequested }: MusicPlayerProps) {
       audio.pause();
       setIsPlaying(false);
     } else {
-      if (!hasStartedRef.current || audio.currentTime < START_OFFSET_SECONDS) {
-        playFromOffset(START_OFFSET_SECONDS);
-      } else {
-        audio
-          .play()
-          .then(() => setIsPlaying(true))
-          .catch(() => playFromOffset(START_OFFSET_SECONDS));
-      }
+      audio
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => playFromOffset());
     }
   };
 
@@ -142,7 +137,7 @@ export default function MusicPlayer({ isAutoPlayRequested }: MusicPlayerProps) {
       audio.src = FALLBACK_AUDIO_SRC;
       audio.load();
       if (hasStartedRef.current) {
-        playFromOffset(START_OFFSET_SECONDS);
+        playFromOffset();
       }
     }
   };
@@ -154,6 +149,7 @@ export default function MusicPlayer({ isAutoPlayRequested }: MusicPlayerProps) {
         src={PRIMARY_AUDIO_SRC}
         preload="auto"
         onPlay={() => setIsPlaying(true)}
+        onTimeUpdate={handleTimeUpdate}
         onPause={() => setIsPlaying(false)}
         onEnded={handleEnded}
         onError={handleAudioError}

@@ -27,6 +27,7 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConfirmed, setIsConfirmed] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -77,7 +78,15 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
     };
 
     fetchWishes();
-  }, []);
+
+    // Kiểm tra trạng thái đã xác nhận tham dự trước đó
+    try {
+      const confirmKey = guestName ? `tri_confirmed_${guestName.trim()}` : 'tri_confirmed_guest';
+      if (localStorage.getItem(confirmKey) || localStorage.getItem('tri_invitation_confirmed')) {
+        setIsConfirmed(true);
+      }
+    } catch (_) {}
+  }, [guestName]);
 
   // Nén ảnh client-side trước khi đưa vào form để không vượt quá giới hạn 4.5MB của Vercel
   const compressImageFile = (file: File): Promise<string> => {
@@ -149,13 +158,6 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
   const handlePreSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
-
-    // Không bắt buộc nhập biệt danh, nếu để trống sẽ tự lấy tên khách
-    if (!formData.message.trim()) {
-      setErrorMessage('Hãy gửi gắm một vài dòng lời chúc tới Trí nhé!');
-      return;
-    }
-
     setShowConfirmModal(true);
   };
 
@@ -229,6 +231,17 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
       });
       setSelectedImages([]);
       setSubmitSuccess(true);
+      setIsConfirmed(true);
+
+      // Đánh dấu đã xác nhận tham dự vào máy khách để không cho gửi lại
+      const confirmKey = guestName ? `tri_confirmed_${guestName.trim()}` : 'tri_confirmed_guest';
+      try {
+        localStorage.setItem(confirmKey, 'true');
+        localStorage.setItem('tri_invitation_confirmed', 'true');
+      } catch (e) {
+        console.warn(e);
+      }
+
       soundFX.playCelebration();
 
       confetti({
@@ -256,6 +269,13 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
       setWishes(updated);
       try {
         localStorage.setItem('tri_graduation_wishes', JSON.stringify(updated));
+      } catch (_) {}
+
+      setIsConfirmed(true);
+      const confirmKey = guestName ? `tri_confirmed_${guestName.trim()}` : 'tri_confirmed_guest';
+      try {
+        localStorage.setItem(confirmKey, 'true');
+        localStorage.setItem('tri_invitation_confirmed', 'true');
       } catch (_) {}
 
       setErrorMessage(err.message || 'Không thể kết nối đến máy chủ. Lời chúc đã được lưu cục bộ.');
@@ -316,7 +336,7 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
           <MessageCircle className="w-3.5 h-3.5 text-white" />
           Lưu Bút Tốt Nghiệp • Guestbook
         </div>
-        <h2 className="font-serif text-2xl sm:text-4xl font-extrabold text-[#061C38] tracking-tight drop-shadow-sm">
+        <h2 className="font-serif text-[14px] sm:text-3xl md:text-4xl font-extrabold text-[#061C38] tracking-tight drop-shadow-sm whitespace-nowrap">
           GỬI LỜI CHÚC & KHOẢNH KHẮC KỶ NIỆM
         </h2>
         <p className="mt-1.5 text-navy-950 font-sans text-xs sm:text-sm max-w-lg mx-auto font-medium">
@@ -333,10 +353,10 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
           </div>
 
           <h3 className="font-serif text-xl font-bold text-navy-950 mb-1 flex items-center gap-2">
-            Để Lại Lời Chúc Cho Trí
+            Đến với Trí hôm đó nhéeee
           </h3>
           <p className="text-xs text-slate-500 mb-5">
-            Hãy chia sẻ cảm xúc, kỉ niệm hoặc gửi kèm ảnh chụp chung cùng Trí nhé!
+            Hãy xác nhận lịch trình và gửi gắm đôi lời yêu thương ở đây nha!
           </p>
 
           {submitSuccess && (
@@ -357,51 +377,67 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
             </div>
           )}
 
-          <form onSubmit={handlePreSubmit} className="space-y-4">
-            <div>
-              <label className="block text-[11px] font-mono uppercase text-slate-600 mb-1">
-                Bạn Có Thể Tham Dự Không?
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { value: 'yes', label: 'Tham gia' },
-                  { value: 'maybe', label: 'Cố gắng' },
-                  { value: 'no', label: 'Bận rồi' },
-                ].map((item) => (
-                  <button
-                    key={item.value}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, attendance: item.value as any })}
-                    className={`py-2 px-1 text-xs font-medium rounded-xl border transition-all text-center cursor-pointer ${
-                      formData.attendance === item.value
-                        ? 'bg-[#27A4F2] text-white font-bold border-[#27A4F2] shadow-sm'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-400'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+          {isConfirmed ? (
+            <div className="py-7 px-5 rounded-2xl bg-gradient-to-b from-emerald-50/90 to-emerald-50/30 border border-emerald-200 text-center flex flex-col items-center shadow-sm">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3 shadow-sm">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+              <h4 className="font-serif font-bold text-lg text-emerald-950 mb-1.5">
+                Đã Xác Nhận Tham Dự Thành Công!
+              </h4>
+              <p className="text-xs text-slate-600 max-w-sm mb-4 leading-relaxed">
+                {guestName ? `Cảm ơn bạn ${guestName}!` : 'Cảm ơn bạn!'} Phản hồi và lời chúc của bạn đã được ghi nhận. Bạn có thể xem lại lời chúc của mình trên bảng tin bên cạnh nhé! 🎓💐
+              </p>
+              <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white text-emerald-800 text-xs font-semibold font-mono border border-emerald-200 shadow-xs">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Trạng thái: Đã Xác Nhận</span>
               </div>
             </div>
+          ) : (
+            <form onSubmit={handlePreSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-mono uppercase text-slate-600 mb-1">
+                  Bạn Có Thể Tham Dự Hong?
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'yes', label: 'Tham gia' },
+                    { value: 'maybe', label: 'Cố gắng' },
+                    { value: 'no', label: 'Bận rồi' },
+                  ].map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, attendance: item.value as any })}
+                      className={`py-2 px-1 text-xs font-medium rounded-xl border transition-all text-center cursor-pointer ${
+                        formData.attendance === item.value
+                          ? 'bg-[#27A4F2] text-white font-bold border-[#27A4F2] shadow-sm'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-400'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-[11px] font-mono uppercase text-slate-600 mb-1">
-                Lời Chúc Dành Cho Trí <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                rows={3}
-                value={formData.message}
-                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                placeholder="Chúc Trí tốt nghiệp thật rực rỡ, thành công trên con đường sắp tới..."
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#27A4F2] text-sm resize-none"
-                required
-              />
-            </div>
+              <div>
+                <label className="block text-[11px] font-mono uppercase text-slate-600 mb-1">
+                  Lời Chúc Của Bạn Dành Cho Trí
+                </label>
+                <textarea
+                  rows={3}
+                  value={formData.message}
+                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                  placeholder="Gửi vài dòng chúc mừng hoặc chia sẻ kỷ niệm cùng Trí nhé..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-[#27A4F2] text-sm resize-none"
+                />
+              </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-[11px] font-mono uppercase text-slate-600">
-                  Ảnh Kỷ Niệm Cùng Trí (Tùy chọn)
+                  Ảnh Kỷ Niệm Cùng Trí
                 </label>
                 <span className="text-[10px] text-slate-400 font-mono">{selectedImages.length}/5 ảnh</span>
               </div>
@@ -468,7 +504,7 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
               {formData.isPublic && (
                 <div className="pl-6.5 pt-0.5">
                   <label className="block text-[11px] font-mono uppercase text-slate-600 mb-1">
-                    Biệt Danh Của Bạn <span className="text-slate-400 font-normal lowercase">(tùy chọn)</span>
+                    Biệt Danh Của Bạn
                   </label>
                   <div className="relative">
                     <input
@@ -482,8 +518,8 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
                   </div>
                   <p className="text-[10px] text-slate-400 mt-1">
                     {guestName 
-                      ? `💡 Không bắt buộc. Nếu để trống, lời chúc sẽ hiển thị tên "${guestName}".` 
-                      : '💡 Không bắt buộc nhập. Bạn có thể để trống hoặc đặt biệt danh gần gũi.'}
+                      ? `💡 Nếu để trống, lời chúc sẽ hiển thị tên "${guestName}".` 
+                      : '💡 Bạn có thể để trống hoặc đặt biệt danh gần gũi.'}
                   </p>
                 </div>
               )}
@@ -498,6 +534,7 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
               <span>Gửi Lời Chúc Tới Trí</span>
             </button>
           </form>
+          )}
         </div>
 
         {/* ================= BÊN PHẢI: KHUNG MÔ PHỎNG MÀN HÌNH ĐIỆN THOẠI - LƯỚT XUỐNG XEM CÁC BÀI ĐĂNG INSTAGRAM ================= */}
@@ -533,7 +570,6 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
                 wishes.map((wish) => {
                   const photoIdx = postPhotoIndexes[wish.id] || 0;
                   const hasPhotos = wish.images && wish.images.length > 0;
-                  const attLabel = getAttendanceLabel(wish.attendance);
 
                   return (
                     <article key={wish.id} className="bg-white mb-3 first:mt-0 last:mb-0 shadow-sm border-b border-slate-100">
@@ -562,10 +598,6 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
                           </p>
                         </div>
                       </div>
-
-                      <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full border ${attLabel.bg}`}>
-                        {attLabel.text}
-                      </span>
                     </div>
 
                     {/* Ảnh bài đăng (vuông chuẩn Instagram) */}
@@ -627,7 +659,11 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
                     <div className="px-3.5 pb-3 pt-1 text-xs text-slate-800">
                       <p className="leading-relaxed">
                         <span className="font-bold text-navy-950 mr-1.5">{wish.name}</span>
-                        {wish.message}
+                        {wish.message ? (
+                          <span>{wish.message}</span>
+                        ) : (
+                          <span className="text-slate-500 italic">Đã gửi lời chúc mừng tốt nghiệp tới Trí 🎓✨</span>
+                        )}
                       </p>
                       <div className="mt-1.5 flex flex-wrap gap-1 text-[10px] font-mono text-navy-800">
                         <span>#Graduation2026</span>
@@ -671,11 +707,11 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
               </div>
 
               <h3 className="font-serif text-lg font-bold text-navy-950 mb-1">
-                Xác Nhận Gửi Lời Chúc?
+                Xác Nhận Tham Dự & Gửi Lời Chúc?
               </h3>
 
               <p className="text-xs text-slate-600 leading-relaxed mb-5">
-                Bạn có chắc chắn muốn gửi lời chúc này đến <span className="font-bold text-navy-900">Trí Nguyễn</span> không?
+                Sau khi gửi, thông tin xác nhận tham dự của bạn sẽ được lưu lại và gửi tới <span className="font-bold text-navy-900">Trí Nguyễn</span>.
               </p>
 
               <div className="flex gap-2.5">

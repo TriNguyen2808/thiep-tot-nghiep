@@ -46,7 +46,7 @@ export default function GallerySection({ collections }: GallerySectionProps) {
           <Camera className="w-3.5 h-3.5 text-white" />
           Kỷ Niệm Thanh Xuân • Photo Album
         </div>
-        <h2 className="font-serif text-2xl sm:text-4xl font-extrabold text-[#061C38] tracking-tight drop-shadow-sm">
+        <h2 className="font-serif text-[13px] sm:text-3xl md:text-4xl font-extrabold text-[#061C38] tracking-tight drop-shadow-sm whitespace-nowrap">
           BỘ SƯU TẬP KHOẢNH KHẮC ĐẸP TẠI TRƯỜNG
         </h2>
         <p className="mt-1.5 text-navy-950 font-sans text-xs sm:text-sm max-w-lg mx-auto font-medium">
