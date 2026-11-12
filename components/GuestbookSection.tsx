@@ -79,11 +79,13 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
 
     fetchWishes();
 
-    // Kiểm tra trạng thái đã xác nhận tham dự trước đó
+    // Kiểm tra trạng thái đã xác nhận tham dự trước đó cho từng khách riêng biệt
     try {
       const confirmKey = guestName ? `tri_confirmed_${guestName.trim()}` : 'tri_confirmed_guest';
-      if (localStorage.getItem(confirmKey) || localStorage.getItem('tri_invitation_confirmed')) {
+      if (localStorage.getItem(confirmKey)) {
         setIsConfirmed(true);
+      } else {
+        setIsConfirmed(false);
       }
     } catch (_) {}
   }, [guestName]);
@@ -237,7 +239,6 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
       const confirmKey = guestName ? `tri_confirmed_${guestName.trim()}` : 'tri_confirmed_guest';
       try {
         localStorage.setItem(confirmKey, 'true');
-        localStorage.setItem('tri_invitation_confirmed', 'true');
       } catch (e) {
         console.warn(e);
       }
@@ -275,7 +276,6 @@ export default function GuestbookSection({ guestName = '' }: GuestbookSectionPro
       const confirmKey = guestName ? `tri_confirmed_${guestName.trim()}` : 'tri_confirmed_guest';
       try {
         localStorage.setItem(confirmKey, 'true');
-        localStorage.setItem('tri_invitation_confirmed', 'true');
       } catch (_) {}
 
       setErrorMessage(err.message || 'Không thể kết nối đến máy chủ. Lời chúc đã được lưu cục bộ.');

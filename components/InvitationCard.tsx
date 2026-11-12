@@ -56,12 +56,14 @@ export default function InvitationCard({
   const [currentGuest, setCurrentGuest] = useState<GuestItem | null>(null);
   const [hasConfirmed, setHasConfirmed] = useState(false);
 
-  // Kiểm tra trạng thái đã xác nhận tham dự
+  // Kiểm tra trạng thái đã xác nhận tham dự cho khách này
   useEffect(() => {
     try {
       const confirmKey = guestName ? `tri_confirmed_${guestName.trim()}` : 'tri_confirmed_guest';
-      if (localStorage.getItem(confirmKey) || localStorage.getItem('tri_invitation_confirmed')) {
+      if (localStorage.getItem(confirmKey)) {
         setHasConfirmed(true);
+      } else {
+        setHasConfirmed(false);
       }
     } catch (_) {}
   }, [guestName]);

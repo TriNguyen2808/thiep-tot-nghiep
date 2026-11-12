@@ -7,6 +7,14 @@ import { Wish } from '@/types';
 const dataFilePath = path.join(process.cwd(), 'data', 'wishes.json');
 const tmpFilePath = path.join('/tmp', 'wishes.json');
 
+const REPO_OWNER = process.env.GITHUB_REPO_OWNER || 'TriNguyen2808';
+const REPO_NAME = process.env.GITHUB_REPO_NAME || 'thiep-tot-nghiep';
+const GITHUB_WISHES_FILE_PATH = 'data/wishes.json';
+
+function getGitHubToken(): string | undefined {
+  return process.env.GITHUB_TOKEN?.trim();
+}
+
 // In-memory store cho runtime Next.js
 let wishesMemory: Wish[] = [...INITIAL_WISHES];
 
@@ -41,6 +49,40 @@ function persistWishes(list: Wish[]) {
 }
 
 export async function GET() {
+  const token = getGitHubToken();
+
+  // 1. Thử lấy từ GitHub nếu có token hoặc đang trên Vercel
+  if (token || process.env.VERCEL) {
+    try {
+      const headers: Record<string, string> = {
+        'User-Agent': 'NextJS-Thiep-Moi-App',
+        'Accept': 'application/vnd.github.v3.raw',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const ghRes = await fetch(
+        `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${GITHUB_WISHES_FILE_PATH}?ref=main&t=${Date.now()}`,
+        { headers, cache: 'no-store' }
+      );
+
+      if (ghRes.ok) {
+        const ghData = await ghRes.json();
+        if (Array.isArray(ghData)) {
+          wishesMemory = ghData;
+          return NextResponse.json({
+            success: true,
+            data: ghData,
+            source: 'github',
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi đọc wishes từ GitHub API, thử đọc local:', e);
+    }
+  }
+
   const current = getStoredWishes();
   return NextResponse.json({
     success: true,
@@ -66,9 +108,69 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
     };
 
-    const current = getStoredWishes();
+    let current = getStoredWishes();
+    const token = getGitHubToken();
+
+    let currentSha: string | undefined;
+    if (token) {
+      try {
+        const getFileRes = await fetch(
+          `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${GITHUB_WISHES_FILE_PATH}?ref=main&t=${Date.now()}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'User-Agent': 'NextJS-Thiep-Moi-App',
+              'Accept': 'application/vnd.github.v3+json',
+            },
+            cache: 'no-store',
+          }
+        );
+
+        if (getFileRes.ok) {
+          const fileInfo = await getFileRes.json();
+          currentSha = fileInfo.sha;
+          if (fileInfo.content) {
+            const rawContent = Buffer.from(fileInfo.content, 'base64').toString('utf8');
+            const parsed = JSON.parse(rawContent);
+            if (Array.isArray(parsed)) {
+              current = parsed;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Get GitHub wishes SHA error:', err);
+      }
+    }
+
     const updated = [newWish, ...current];
     persistWishes(updated);
+
+    // Đồng bộ vĩnh viễn lên GitHub nếu có token
+    if (token) {
+      try {
+        const contentBase64 = Buffer.from(JSON.stringify(updated, null, 2), 'utf8').toString('base64');
+        await fetch(
+          `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${GITHUB_WISHES_FILE_PATH}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'User-Agent': 'NextJS-Thiep-Moi-App',
+              'Content-Type': 'application/json',
+              'Accept': 'application/vnd.github.v3+json',
+            },
+            body: JSON.stringify({
+              message: `Lời chúc mới từ ${finalName}`,
+              content: contentBase64,
+              sha: currentSha,
+              branch: 'main',
+            }),
+          }
+        );
+      } catch (ghErr) {
+        console.warn('Lỗi commit lời chúc lên GitHub:', ghErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,
